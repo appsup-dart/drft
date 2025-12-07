@@ -153,6 +153,12 @@ class Planner {
     for (final resourceId in desired.resources.keys) {
       if (!actual.resources.containsKey(resourceId)) {
         final resource = desired.resources[resourceId]!.resource;
+        
+        // Skip read-only resources - they cannot be created, only read
+        if (resource is ReadOnlyResource) {
+          continue;
+        }
+        
         final resourceToAdd = _tryBuildDependentResource(resource, actual);
         operations.add(Operation.create(resource: resourceToAdd));
       }
@@ -163,6 +169,15 @@ class Planner {
       if (actual.resources.containsKey(resourceId)) {
         final desiredResource = desired.resources[resourceId]!.resource;
         final currentState = actual.resources[resourceId]!;
+
+        // Skip read-only resources - they cannot be updated, only read
+        if (desiredResource is ReadOnlyResource) {
+          // Read-only resources are always considered unchanged (they're external)
+          if (includeVerboseInfo) {
+            unchanged.add(resourceId);
+          }
+          continue;
+        }
 
         // For DependentResource, try to build it if dependencies exist
         final resourceToCompare = _tryBuildDependentResourceForComparison(
@@ -200,9 +215,16 @@ class Planner {
     // Find resources to delete
     for (final resourceId in actual.resources.keys) {
       if (!desired.resources.containsKey(resourceId)) {
+        final currentState = actual.resources[resourceId]!;
+        
+        // Skip read-only resources - they cannot be deleted, only read
+        if (currentState.resource is ReadOnlyResource) {
+          continue;
+        }
+        
         operations.add(
           Operation.delete(
-            currentState: actual.resources[resourceId]!,
+            currentState: currentState,
           ),
         );
       }

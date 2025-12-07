@@ -59,7 +59,7 @@ The provider supports multiple authentication methods:
 
 ### Firebase Project
 
-Represents a Firebase project. Projects can be read but creation and deletion must be done through the Firebase Console or Google Cloud Console.
+Represents a Firebase project that exists externally. This is a **data source** - it cannot be created, updated, or deleted through DRFT. Projects must be managed through the Firebase Console or Google Cloud Console.
 
 ```dart
 FirebaseProject(
@@ -77,8 +77,14 @@ FirebaseProject(
 **Operations:**
 - ✅ Read: Verify project exists and get current state
 - ❌ Create: Not supported (create via Firebase Console)
-- ⚠️ Update: Limited (verifies project exists)
+- ❌ Update: Not supported (data source - read-only)
 - ❌ Delete: Not supported (delete via Firebase Console)
+
+**Data Source Behavior:**
+- `FirebaseProject` extends `ReadOnlyResource` (read-only external resource)
+- It will never appear in create, update, or delete operations
+- It is read during planning and refresh to verify existence
+- Other resources (like `FirebaseApp`) can depend on it to get the `projectId`
 
 ### Firebase App
 

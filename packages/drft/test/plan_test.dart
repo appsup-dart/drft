@@ -378,6 +378,136 @@ void main() {
       expect(plan.operations, hasLength(1));
       expect(plan.operations.first.type, equals(OperationType.update));
     });
+
+    test('never creates ReadOnlyResource in plan', () {
+      const readOnlyResource = TestReadOnlyResource(
+        id: 'readonly.resource',
+        name: 'readonly',
+      );
+      final desired = State.fromResources([readOnlyResource], stackName: 'test');
+      final actual = State.empty(stackName: 'test');
+
+      final plan = planner.createPlan(desired: desired, actual: actual);
+
+      // ReadOnlyResource should not appear in create operations
+      expect(plan.operations, isEmpty);
+      expect(
+        plan.operations.where((op) => op.type == OperationType.create),
+        isEmpty,
+      );
+    });
+
+    test('never updates ReadOnlyResource in plan', () {
+      const originalReadOnly = TestReadOnlyResource(
+        id: 'readonly.resource',
+        name: 'old',
+      );
+      const updatedReadOnly = TestReadOnlyResource(
+        id: 'readonly.resource',
+        name: 'new',
+      );
+
+      final desired = State.fromResources([updatedReadOnly], stackName: 'test');
+      final actual = State(
+        version: '1.0',
+        stackName: 'test',
+        resources: {
+          'readonly.resource': ResourceState(resource: originalReadOnly),
+        },
+      );
+
+      final plan = planner.createPlan(desired: desired, actual: actual);
+
+      // ReadOnlyResource should not appear in update operations
+      expect(plan.operations, isEmpty);
+      expect(
+        plan.operations.where((op) => op.type == OperationType.update),
+        isEmpty,
+      );
+    });
+
+    test('never deletes ReadOnlyResource in plan', () {
+      const readOnlyResource = TestReadOnlyResource(
+        id: 'readonly.resource',
+        name: 'readonly',
+      );
+
+      final desired = State.empty(stackName: 'test');
+      final actual = State(
+        version: '1.0',
+        stackName: 'test',
+        resources: {
+          'readonly.resource': ResourceState(resource: readOnlyResource),
+        },
+      );
+
+      final plan = planner.createPlan(desired: desired, actual: actual);
+
+      // ReadOnlyResource should not appear in delete operations
+      expect(plan.operations, isEmpty);
+      expect(
+        plan.operations.where((op) => op.type == OperationType.delete),
+        isEmpty,
+      );
+    });
+
+    test('includes ReadOnlyResource in unchanged list when in verbose mode', () {
+      const readOnlyResource = TestReadOnlyResource(
+        id: 'readonly.resource',
+        name: 'readonly',
+      );
+
+      final desired = State.fromResources([readOnlyResource], stackName: 'test');
+      final actual = State(
+        version: '1.0',
+        stackName: 'test',
+        resources: {
+          'readonly.resource': ResourceState(resource: readOnlyResource),
+        },
+      );
+
+      final plan = planner.createPlan(
+        desired: desired,
+        actual: actual,
+        includeVerboseInfo: true,
+      );
+
+      // ReadOnlyResource should be in unchanged list
+      expect(plan.verboseInfo.unchanged, contains('readonly.resource'));
+      expect(plan.operations, isEmpty);
+    });
+
+    test('allows regular resources to depend on ReadOnlyResource', () {
+      const readOnlyResource = TestReadOnlyResource(
+        id: 'readonly.resource',
+        name: 'readonly',
+      );
+      final regularResource = TestResource(
+        id: 'regular.resource',
+        name: 'regular',
+        dependencies: [readOnlyResource],
+      );
+
+      // ReadOnlyResource exists in actual state
+      final desired = State.fromResources(
+        [readOnlyResource, regularResource],
+        stackName: 'test',
+      );
+      final actual = State(
+        version: '1.0',
+        stackName: 'test',
+        resources: {
+          'readonly.resource': ResourceState(resource: readOnlyResource),
+        },
+      );
+
+      final plan = planner.createPlan(desired: desired, actual: actual);
+
+      // Should only create the regular resource, not the ReadOnlyResource
+      expect(plan.operations, hasLength(1));
+      expect(plan.operations.first.type, equals(OperationType.create));
+      expect(plan.operations.first.resource?.id, equals('regular.resource'));
+    });
   });
 
   group('Plan Properties Comparison', () {
@@ -466,5 +596,16 @@ class TestResourceWithValue extends Resource {
     required this.name,
     required this.value,
     super.dependencies,
+  });
+}
+
+/// Test read-only resource for testing ReadOnlyResource behavior
+class TestReadOnlyResource extends ReadOnlyResource {
+  final String name;
+
+  const TestReadOnlyResource({
+    required super.id,
+    required this.name,
+    super.dependencies = const [],
   });
 }

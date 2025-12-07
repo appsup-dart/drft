@@ -82,9 +82,40 @@ class Executor {
     try {
       final results = <OperationResult>[];
       final createdStates = <String, ResourceState>{};
-      
+
       // Load current state to get dependencies from previous executions
       final currentState = await stateManager.load();
+
+      // Read read-only resources that are in desired state but not in actual state
+      // This verifies they exist externally before other operations depend on them
+      final readOnlyResourceStates = <String, ResourceState>{};
+      if (desiredState != null) {
+        for (final resourceId in desiredState.resources.keys) {
+          if (!currentState.resources.containsKey(resourceId)) {
+            final resource = desiredState.resources[resourceId]!.resource;
+            if (resource is ReadOnlyResource) {
+              try {
+                // Find provider for this read-only resource
+                final provider = _findProviderForResource(resource);
+                // Read the read-only resource to verify it exists
+                final readOnlyResourceState =
+                    await provider.readResource(resource);
+                // Store for later use and state persistence
+                readOnlyResourceStates[resourceId] = readOnlyResourceState;
+                currentState.resources[resourceId] = readOnlyResourceState;
+              } on ResourceNotFoundException {
+                throw DrftException(
+                  'Read-only resource ${resource.id} (${resource.runtimeType}) not found. '
+                  'Read-only resources must exist externally before they can be used. '
+                  'Please create ${resource.runtimeType} with ${resource.id} '
+                  'through the appropriate external system.',
+                );
+              }
+            }
+          }
+        }
+      }
+
       final availableStates = <String, ResourceState>{
         ...currentState.resources,
         ...createdStates,
@@ -142,6 +173,9 @@ Apply Summary:
         final baseState = await stateManager.load();
         final updatedResources =
             Map<String, ResourceState>.from(baseState.resources);
+
+        // Include read-only resource states that were read during execution
+        updatedResources.addAll(readOnlyResourceStates);
 
         for (final result in results) {
           if (result.success && result.newState != null) {
@@ -251,6 +285,10 @@ Apply Summary:
       throw DrftException('Cannot find provider: no resource in operation');
     }
 
+    return _findProviderForResource(resource);
+  }
+
+  Provider _findProviderForResource(Resource resource) {
     for (final provider in providers) {
       if (provider.canHandle(resource)) {
         return provider;

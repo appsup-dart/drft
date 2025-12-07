@@ -67,3 +67,46 @@ abstract class Resource<StateType extends ResourceState> {
     this.dependencies = const [],
   });
 }
+
+/// Base class for read-only external resources (data sources)
+///
+/// Read-only resources represent external infrastructure that cannot be
+/// created, updated, or deleted through DRFT. They are used to fetch
+/// information from external systems that other resources depend on.
+///
+/// Examples:
+/// - Firebase projects (must be created via Firebase Console)
+/// - Existing cloud resources managed outside DRFT
+/// - External APIs that provide reference data
+///
+/// Read-only resources:
+/// - Are only read (to verify existence and get current state)
+/// - Are never created, updated, or deleted in plans
+/// - Can be used as dependencies by other resources
+/// - Are refreshed during state refresh operations
+///
+/// Example:
+/// ```dart
+/// class FirebaseProject extends ReadOnlyResource<FirebaseProjectState> {
+///   final String projectId;
+///   final String displayName;
+///
+///   const FirebaseProject({
+///     required String id,
+///     required this.projectId,
+///     required this.displayName,
+///     List<Resource> dependencies = const [],
+///   }) : super(
+///           id: id,
+///           dependencies: dependencies,
+///         );
+/// }
+/// ```
+@immutable
+abstract class ReadOnlyResource<StateType extends ResourceState>
+    extends Resource<StateType> {
+  const ReadOnlyResource({
+    required super.id,
+    super.dependencies = const [],
+  });
+}

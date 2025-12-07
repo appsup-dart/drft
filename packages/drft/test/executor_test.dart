@@ -281,6 +281,70 @@ void main() {
       final savedState = await stateManager.load();
       expect(savedState.stackName, equals('my-stack'));
     });
+
+    test('reads ReadOnlyResource that exists externally', () async {
+      const readOnlyResource = TestReadOnlyResource(
+        id: 'readonly.resource',
+        name: 'readonly',
+      );
+
+      // Create a plan with no operations (ReadOnlyResource won't be in plan)
+      final plan = Plan(operations: []);
+
+      // But include it in desired state
+      final desiredState = State(
+        version: '1.0',
+        stackName: 'test',
+        resources: {
+          'readonly.resource': ResourceState(resource: readOnlyResource),
+        },
+      );
+
+      // Mock provider should handle readResource for ReadOnlyResource
+      provider.readOnlyResourceState =
+          ResourceState(resource: readOnlyResource);
+
+      await executor.execute(plan, stateManager, desiredState: desiredState);
+
+      // ReadOnlyResource state should be saved
+      final savedState = await stateManager.load();
+      expect(savedState.resources.containsKey('readonly.resource'), isTrue);
+    });
+
+    test('throws error if ReadOnlyResource does not exist externally',
+        () async {
+      const readOnlyResource = TestReadOnlyResource(
+        id: 'readonly.resource',
+        name: 'readonly',
+      );
+
+      final plan = Plan(operations: []);
+
+      final desiredState = State(
+        version: '1.0',
+        stackName: 'test',
+        resources: {
+          'readonly.resource': ResourceState(resource: readOnlyResource),
+        },
+      );
+
+      // Provider will throw ResourceNotFoundException
+      provider.shouldThrowNotFoundFor = 'readonly.resource';
+
+      expect(
+        () => executor.execute(plan, stateManager, desiredState: desiredState),
+        throwsA(
+          isA<DrftException>().having(
+            (e) => e.message,
+            'message',
+            allOf(
+              contains('Read-only resource'),
+              contains('not found'),
+            ),
+          ),
+        ),
+      );
+    });
   });
 }
 
@@ -295,12 +359,28 @@ class TestResource extends Resource {
   });
 }
 
+/// Test read-only resource for testing ReadOnlyResource behavior
+class TestReadOnlyResource extends ReadOnlyResource {
+  final String name;
+
+  const TestReadOnlyResource({
+    required super.id,
+    required this.name,
+    super.dependencies = const [],
+  });
+}
+
 /// Mock provider that can be configured to fail for specific resources
 class MockProvider extends Provider {
   String? shouldFailFor;
+  String? shouldThrowNotFoundFor;
+  ResourceState? readOnlyResourceState;
 
-  MockProvider({this.shouldFailFor})
-      : super(
+  MockProvider({
+    this.shouldFailFor,
+    this.shouldThrowNotFoundFor,
+    this.readOnlyResourceState,
+  }) : super(
           name: 'mock',
           version: '1.0.0',
         );
@@ -327,7 +407,13 @@ class MockProvider extends Provider {
 
   @override
   Future<ResourceState> readResource(Resource resource) async {
-    throw UnimplementedError();
+    if (shouldThrowNotFoundFor == resource.id) {
+      throw ResourceNotFoundException(resource.id);
+    }
+    if (resource is ReadOnlyResource && readOnlyResourceState != null) {
+      return readOnlyResourceState!;
+    }
+    return ResourceState(resource: resource);
   }
 
   @override

@@ -12,8 +12,15 @@ class FirebaseProjectState extends ResourceState {
 
 /// Firebase Project resource
 ///
-/// Represents a Firebase project that can be created, updated, or deleted.
-class FirebaseProject extends Resource<FirebaseProjectState> {
+/// Represents a Firebase project that exists externally.
+/// Firebase projects cannot be created, updated, or deleted through DRFT.
+/// They must be managed through the Firebase Console or Google Cloud Console.
+///
+/// This resource serves as a data source to:
+/// - Verify the project exists
+/// - Read project information
+/// - Provide project ID for other resources that depend on it
+class FirebaseProject extends ReadOnlyResource<FirebaseProjectState> {
   /// The desired project ID (must be globally unique)
   final String projectId;
 

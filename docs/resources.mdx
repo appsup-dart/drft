@@ -516,6 +516,105 @@ void main() {
 }
 ```
 
+## Data Sources (Read-Only External Resources)
+
+Some resources represent external infrastructure that cannot be created, updated, or deleted through DRFT. These are called **read-only resources** and extend the `ReadOnlyResource` base class.
+
+### When to Use Data Sources
+
+Data sources are appropriate for:
+- Resources managed outside DRFT (e.g., Firebase projects created via Console)
+- External APIs that provide reference data
+- Existing infrastructure that should not be modified
+- Resources that other resources depend on for information
+
+### Implementing a Data Source
+
+Extend `ReadOnlyResource` instead of `Resource`:
+
+```dart
+class FirebaseProject extends ReadOnlyResource<FirebaseProjectState> {
+  final String projectId;
+  final String displayName;
+
+  const FirebaseProject({
+    required String id,
+    required this.projectId,
+    required this.displayName,
+    List<Resource> dependencies = const [],
+  }) : super(
+          id: id,
+          dependencies: dependencies,
+        );
+}
+```
+
+`ReadOnlyResource` is automatically detected by the planner and executor, so no additional configuration is needed.
+
+### How Data Sources Work
+
+1. **Planning**: Data sources are never included in create, update, or delete operations
+2. **Reading**: Data sources are read to verify they exist and get current state
+3. **Dependencies**: Other resources can depend on data sources normally
+4. **Refresh**: Data sources are refreshed during state refresh operations
+
+### Example Usage
+
+```dart
+final stack = DrftStack(
+  name: 'my-stack',
+  providers: [FirebaseProvider()],
+  resources: [
+    // Data source - cannot be created/updated/deleted
+    FirebaseProject(
+      id: 'project',
+      projectId: 'my-project-id',  // Must exist externally
+      displayName: 'My Project',
+    ),
+    
+    // Regular resource - depends on data source
+    FirebaseApp(
+      id: 'ios-app',
+      projectId: 'my-project-id',  // References the project
+      platform: FirebaseAppPlatform.ios,
+      displayName: 'iOS App',
+      bundleId: 'com.example.app',
+    ),
+  ],
+);
+
+// Plan will only include operations for FirebaseApp
+// FirebaseProject will be read to verify it exists
+final plan = await stack.plan();
+```
+
+### Provider Implementation
+
+Providers must implement `readResource` for read-only resources to verify they exist externally:
+
+```dart
+@override
+Future<ResourceState> readResource(Resource resource) async {
+  if (resource is FirebaseProject) {
+    // Verify the project exists in Firebase
+    final project = await _firebaseManagement.projects.getProject(
+      resource.projectId,
+    );
+    
+    if (project == null) {
+      throw ResourceNotFoundException(resource.projectId);
+    }
+    
+    return FirebaseProjectState(
+      resource: resource,
+    );
+  }
+  // ... handle other resources
+}
+```
+
+Note: Providers do **not** need to handle `createResource`, `updateResource`, or `deleteResource` for read-only resources, as the planner and executor guarantee these methods will never be called for `ReadOnlyResource` instances.
+
 ## Best Practices
 
 1. **Immutability**: Resources should be immutable with final properties
@@ -526,4 +625,5 @@ void main() {
 6. **Serialization**: Ensure proper JSON serialization/deserialization
 7. **Dependencies**: Make dependencies explicit and clear
 8. **Flutter-style**: Follow Flutter widget patterns for familiarity
+9. **Data Sources**: Extend `ReadOnlyResource` for read-only external resources instead of `Resource`
 

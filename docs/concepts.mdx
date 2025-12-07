@@ -126,6 +126,35 @@ final subnet = Subnet(
 
 Learn more: [Dependent Resources](/dependent-resources)
 
+## Data Sources
+
+**Data sources** are read-only resources that represent external infrastructure managed outside of DRFT. They cannot be created, updated, or deleted through DRFT, but they can be read to verify existence and provide information to other resources.
+
+```dart
+// Data source - represents an existing Firebase project
+final project = FirebaseProject(
+  id: 'project',
+  projectId: 'my-project-id',  // Must exist externally
+  displayName: 'My Project',
+);
+
+// Regular resource - depends on the data source
+final app = FirebaseApp(
+  id: 'app',
+  projectId: project.projectId,  // Uses project information
+  platform: FirebaseAppPlatform.ios,
+  displayName: 'My App',
+);
+```
+
+Data sources:
+- Are only read (never created, updated, or deleted)
+- Can be used as dependencies by other resources
+- Are refreshed during state refresh operations
+- Represent external resources (e.g., projects created via Console)
+
+Learn more: [Resources Guide](/resources#data-sources-read-only-external-resources)
+
 ## How It All Works Together
 
 1. **You define** resources in a stack
