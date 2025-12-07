@@ -212,10 +212,6 @@ class FirebaseProvider extends Provider {
       displayName: app.displayName ?? resource.displayName,
       bundleId: app.bundleId ?? resource.bundleId,
       packageName: app.packageName ?? resource.packageName,
-      appStoreId: app.appStoreId ?? resource.appStoreId,
-      // Note: sha1Fingerprints might not be available in app metadata
-      // Keep the desired value if not available from Firebase
-      sha1Fingerprints: resource.sha1Fingerprints,
     );
 
     return FirebaseAppState(
@@ -245,10 +241,6 @@ class FirebaseProvider extends Provider {
       displayName: app.displayName ?? resource.displayName,
       bundleId: app.bundleId ?? resource.bundleId,
       packageName: app.packageName ?? resource.packageName,
-      appStoreId: app.appStoreId ?? resource.appStoreId,
-      // Note: sha1Fingerprints might not be available in app metadata
-      // Keep the desired value if not available from Firebase
-      sha1Fingerprints: resource.sha1Fingerprints,
     );
 
     return FirebaseAppState(
@@ -261,8 +253,68 @@ class FirebaseProvider extends Provider {
     ResourceState current,
     FirebaseApp desired,
   ) async {
-    // Firebase apps have limited update capabilities
-    // For now, we'll just verify the app exists and return updated state
+    if (current is! FirebaseAppState) {
+      throw DrftException('Invalid state type for Firebase app update');
+    }
+
+    final currentApp = current.resource as FirebaseApp;
+    final appId = current.appId;
+
+    // Verify the app still exists and get current state
+    final apps = await _firebaseManagement!.apps.listFirebaseApps(
+      desired.projectId,
+    );
+    apps.firstWhere(
+      (a) => a.appId == appId,
+      orElse: () => throw ResourceNotFoundException(
+        'Firebase app with ID $appId not found in project ${desired.projectId}',
+      ),
+    );
+
+    // Check for immutable property changes
+    if (desired.platform != currentApp.platform) {
+      throw DrftException(
+        'Cannot change platform of an existing Firebase app. '
+        'Current: ${currentApp.platform}, Desired: ${desired.platform}',
+      );
+    }
+
+    if (desired.bundleId != null &&
+        currentApp.bundleId != null &&
+        desired.bundleId != currentApp.bundleId) {
+      throw DrftException(
+        'Cannot change bundleId of an existing iOS Firebase app. '
+        'Current: ${currentApp.bundleId}, Desired: ${desired.bundleId}',
+      );
+    }
+
+    if (desired.packageName != null &&
+        currentApp.packageName != null &&
+        desired.packageName != currentApp.packageName) {
+      throw DrftException(
+        'Cannot change packageName of an existing Android Firebase app. '
+        'Current: ${currentApp.packageName}, Desired: ${desired.packageName}',
+      );
+    }
+
+    // Determine what needs to be updated
+    final needsDisplayNameUpdate =
+        desired.displayName != currentApp.displayName;
+
+    // Check if any updates are needed
+    if (!needsDisplayNameUpdate) {
+      // No changes needed, return current state
+      return current;
+    }
+
+    // Update the app using the updateApp method
+    final platform = _convertPlatform(desired.platform);
+    await _firebaseManagement!.apps.updateApp(
+      desired.projectId,
+      platform,
+      appId,
+      displayName: desired.displayName,
+    );
     return await _readFirebaseApp(desired);
   }
 

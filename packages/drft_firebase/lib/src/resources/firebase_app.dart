@@ -40,12 +40,6 @@ class FirebaseApp extends Resource<FirebaseAppState> {
   /// Package name for Android apps
   final String? packageName;
 
-  /// App Store ID for iOS apps (optional)
-  final String? appStoreId;
-
-  /// SHA-1 fingerprints for Android apps (optional)
-  final List<String>? sha1Fingerprints;
-
   const FirebaseApp({
     required String id,
     required this.projectId,
@@ -53,8 +47,6 @@ class FirebaseApp extends Resource<FirebaseAppState> {
     required this.displayName,
     this.bundleId,
     this.packageName,
-    this.appStoreId,
-    this.sha1Fingerprints,
     List<Resource> dependencies = const [],
   }) : super(
           id: id,
