@@ -1,0 +1,13 @@
+name: drft_example
+description: Example usage of DRFT (Dart Resource Framework Toolkit)
+version: 0.1.0
+publish_to: none
+
+environment:
+  sdk: '>=3.0.0 <4.0.0'
+
+dependencies:
+  drft:
+    path: ../../drft
+  drft_cli:
+    path: ../../drft_cli
