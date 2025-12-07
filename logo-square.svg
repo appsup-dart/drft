@@ -1,12 +1,9 @@
-<svg width="128" height="128" xmlns="http://www.w3.org/2000/svg">
+<svg width="128" height="128" viewBox="34 46 60 60" xmlns="http://www.w3.org/2000/svg">
   <defs>
     <linearGradient id="gradient" x1="0%" y1="0%" x2="100%" y2="100%">
       <stop offset="0%" style="stop-color:#0175C2;stop-opacity:1" />
       <stop offset="100%" style="stop-color:#00D4FF;stop-opacity:1" />
     </linearGradient>
-    <filter id="shadow">
-      <feDropShadow dx="0" dy="2" stdDeviation="3" flood-opacity="0.2"/>
-    </filter>
   </defs>
   
   <!-- Background circle -->
@@ -19,8 +16,7 @@
           stroke="url(#gradient)" 
           stroke-width="4" 
           fill="none" 
-          stroke-linecap="round"
-          filter="url(#shadow)"/>
+          stroke-linecap="round"/>
     
     <!-- Arrow in middle -->
     <path d="M -5 0 L 5 0 M 2 -3 L 5 0 L 2 3" 
@@ -28,16 +24,14 @@
           stroke-width="4" 
           fill="none" 
           stroke-linecap="round" 
-          stroke-linejoin="round"
-          filter="url(#shadow)"/>
+          stroke-linejoin="round"/>
     
     <!-- Right bracket -->
     <path d="M 20 -10 L 20 10 M 20 -10 L 16 -10 M 20 10 L 16 10" 
           stroke="url(#gradient)" 
           stroke-width="4" 
           fill="none" 
-          stroke-linecap="round"
-          filter="url(#shadow)"/>
+          stroke-linecap="round"/>
   </g>
   
   <!-- Text: DRFT -->
