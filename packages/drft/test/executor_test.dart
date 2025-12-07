@@ -51,7 +51,6 @@ void main() {
 
       // Save initial state
       final initialState = State(
-        version: '1.0',
         stackName: 'test',
         resources: {'test.resource': currentState},
       );
@@ -80,7 +79,6 @@ void main() {
 
       // Save initial state
       final initialState = State(
-        version: '1.0',
         stackName: 'test',
         resources: {'test.resource': currentState},
       );
@@ -271,7 +269,6 @@ void main() {
       );
 
       final desiredState = State(
-        version: '1.0',
         stackName: 'my-stack',
         resources: {},
       );
@@ -293,7 +290,6 @@ void main() {
 
       // But include it in desired state
       final desiredState = State(
-        version: '1.0',
         stackName: 'test',
         resources: {
           'readonly.resource': ResourceState(resource: readOnlyResource),
@@ -321,7 +317,6 @@ void main() {
       final plan = Plan(operations: []);
 
       final desiredState = State(
-        version: '1.0',
         stackName: 'test',
         resources: {
           'readonly.resource': ResourceState(resource: readOnlyResource),

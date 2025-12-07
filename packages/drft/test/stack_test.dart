@@ -44,7 +44,6 @@ void main() {
 
         // Save initial state
         final initialState = State(
-          version: '1.0',
           stackName: 'test-stack',
           resources: {
             'test.resource': ResourceState(resource: originalResource),
@@ -71,7 +70,6 @@ void main() {
 
         // Save initial state
         final initialState = State(
-          version: '1.0',
           stackName: 'test-stack',
           resources: {
             'test.resource': ResourceState(resource: resource),
@@ -102,7 +100,6 @@ void main() {
 
         // Save initial state
         final initialState = State(
-          version: '1.0',
           stackName: 'test-stack',
           resources: {
             'test.resource': ResourceState(resource: resource),
@@ -167,7 +164,6 @@ void main() {
 
         // Save initial state
         final initialState = State(
-          version: '1.0',
           stackName: 'test-stack',
           resources: {
             'test.resource': ResourceState(resource: originalResource),
@@ -199,7 +195,6 @@ void main() {
 
         // Save initial state
         final initialState = State(
-          version: '1.0',
           stackName: 'test-stack',
           resources: {
             'test.resource': ResourceState(resource: resource),
@@ -260,7 +255,6 @@ void main() {
 
         // Save initial state
         final initialState = State(
-          version: '1.0',
           stackName: 'test-stack',
           resources: {
             'test.resource': ResourceState(resource: resource),
@@ -387,7 +381,6 @@ void main() {
 
         // Save a state with a different resource that's not in the stack
         final stateWithExtraResource = State(
-          version: '1.0',
           stackName: 'test-stack',
           resources: {
             'stack.resource1': ResourceState(resource: stackResource1),
@@ -431,13 +424,11 @@ void main() {
         // Verify initial state exists
         final initialState = await stateManager.load();
         expect(initialState.resources.containsKey('test.resource'), isTrue);
-        expect(initialState.version, equals('1.0'));
 
-        // Refresh should create a new state with version '1.0' and stack name
+        // Refresh should create a new state with stack name
         final refreshedState = await createStack.refresh();
 
-        // Should be a new state with correct version and stack name
-        expect(refreshedState.version, equals('1.0'));
+        // Should be a new state with correct stack name
         expect(refreshedState.stackName, equals('test-stack'));
         expect(refreshedState.resources.containsKey('test.resource'), isTrue);
       });
@@ -531,7 +522,6 @@ void main() {
 
         // Save initial state
         final initialState = State(
-          version: '1.0',
           stackName: 'test-stack',
           resources: {
             'resource1': ResourceState(resource: resource1),
@@ -561,7 +551,6 @@ void main() {
       test('returns success when no resources to destroy', () async {
         // Empty state
         final emptyState = State(
-          version: '1.0',
           stackName: 'test-stack',
           resources: {},
         );
@@ -590,7 +579,6 @@ void main() {
 
         // Save initial state
         final initialState = State(
-          version: '1.0',
           stackName: 'test-stack',
           resources: {
             'dependency': ResourceState(resource: dependency),

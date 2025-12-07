@@ -28,7 +28,6 @@ void main() {
 
       final desired = State.fromResources([updatedResource], stackName: 'test');
       final actual = State(
-        version: '1.0',
         stackName: 'test',
         resources: {
           'test.resource': ResourceState(resource: originalResource),
@@ -47,7 +46,6 @@ void main() {
 
       final desired = State.empty(stackName: 'test');
       final actual = State(
-        version: '1.0',
         stackName: 'test',
         resources: {
           'test.resource': ResourceState(resource: resource),
@@ -69,7 +67,6 @@ void main() {
 
       final desired = State.fromResources([resource], stackName: 'test');
       final actual = State(
-        version: '1.0',
         stackName: 'test',
         resources: {
           'test.resource': ResourceState(resource: resource),
@@ -89,7 +86,6 @@ void main() {
       final desired =
           State.fromResources([resource1, resource2], stackName: 'test');
       final actual = State(
-        version: '1.0',
         stackName: 'test',
         resources: {
           'resource3': ResourceState(resource: resource3),
@@ -138,7 +134,6 @@ void main() {
 
       final desired = State.empty(stackName: 'test');
       final actual = State(
-        version: '1.0',
         stackName: 'test',
         resources: {
           'resource1': ResourceState(resource: resource1),
@@ -172,7 +167,6 @@ void main() {
       final desired =
           State.fromResources([dependency, dependent], stackName: 'test');
       final actual = State(
-        version: '1.0',
         stackName: 'test',
         resources: {
           'dependency': dependencyState,
@@ -213,7 +207,6 @@ void main() {
 
       final desired = State.fromResources([dependent], stackName: 'test');
       final actual = State(
-        version: '1.0',
         stackName: 'test',
         resources: {
           'dependent': currentState,
@@ -240,7 +233,6 @@ void main() {
 
       final desired = State.fromResources([updatedResource], stackName: 'test');
       final actual = State(
-        version: '1.0',
         stackName: 'test',
         resources: {
           'test.resource': ResourceState(resource: originalResource),
@@ -266,7 +258,6 @@ void main() {
 
       final desired = State.fromResources([resource], stackName: 'test');
       final actual = State(
-        version: '1.0',
         stackName: 'test',
         resources: {
           'test.resource': ResourceState(resource: resource),
@@ -366,7 +357,6 @@ void main() {
 
       final desired = State.fromResources([updatedResource], stackName: 'test');
       final actual = State(
-        version: '1.0',
         stackName: 'test',
         resources: {
           'test.resource': ResourceState(resource: originalResource),
@@ -409,7 +399,6 @@ void main() {
 
       final desired = State.fromResources([updatedReadOnly], stackName: 'test');
       final actual = State(
-        version: '1.0',
         stackName: 'test',
         resources: {
           'readonly.resource': ResourceState(resource: originalReadOnly),
@@ -434,7 +423,6 @@ void main() {
 
       final desired = State.empty(stackName: 'test');
       final actual = State(
-        version: '1.0',
         stackName: 'test',
         resources: {
           'readonly.resource': ResourceState(resource: readOnlyResource),
@@ -459,7 +447,6 @@ void main() {
 
       final desired = State.fromResources([readOnlyResource], stackName: 'test');
       final actual = State(
-        version: '1.0',
         stackName: 'test',
         resources: {
           'readonly.resource': ResourceState(resource: readOnlyResource),
@@ -494,7 +481,6 @@ void main() {
         stackName: 'test',
       );
       final actual = State(
-        version: '1.0',
         stackName: 'test',
         resources: {
           'readonly.resource': ResourceState(resource: readOnlyResource),

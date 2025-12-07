@@ -49,29 +49,20 @@ class ResourceState {
 
 /// Represents the complete state of a stack
 class State {
-  /// Version of the state format
-  final String version;
-
   /// Name of the stack
   final String stackName;
 
   /// Map of resource states by resource ID
   final Map<String, ResourceState> resources;
 
-  /// Metadata about the state
-  final Map<String, dynamic> metadata;
-
   State({
-    required this.version,
     required this.stackName,
     required this.resources,
-    this.metadata = const {},
   });
 
   /// Create an empty state
   factory State.empty({required String stackName}) {
     return State(
-      version: '1.0',
       stackName: stackName,
       resources: {},
     );
@@ -91,7 +82,6 @@ class State {
     }
 
     return State(
-      version: '1.0',
       stackName: stackName ?? 'default',
       resources: resourceStates,
     );
@@ -99,12 +89,10 @@ class State {
 
   Map<String, dynamic> toJson() {
     return {
-      'version': version,
       'stack': stackName,
       'resources': resources.map(
         (key, value) => MapEntry(key, ResourceStateSerialization.toJson(value)),
       ),
-      'metadata': metadata,
     };
   }
 
@@ -180,12 +168,8 @@ class State {
     }
 
     return State(
-      version: json['version'] as String,
       stackName: json['stack'] as String,
       resources: resources,
-      metadata: Map<String, dynamic>.from(
-        json['metadata'] as Map? ?? {},
-      ),
     );
   }
 }

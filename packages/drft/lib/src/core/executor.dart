@@ -193,10 +193,8 @@ Apply Summary:
         }
 
         final updatedState = State(
-          version: baseState.version,
           stackName: desiredState?.stackName ?? baseState.stackName,
           resources: updatedResources,
-          metadata: baseState.metadata,
         );
         await stateManager.save(updatedState);
       }

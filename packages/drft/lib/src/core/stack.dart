@@ -130,7 +130,6 @@ class DrftStack {
         // Create refreshed state with resources from actual infrastructure
         // This is a completely new state based on what actually exists
         final refreshedState = State(
-          version: '1.0',
           stackName: name,
           resources: refreshedResources,
         );
