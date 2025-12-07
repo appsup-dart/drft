@@ -1,0 +1,52 @@
+<svg width="200" height="50" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="gradient" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#0175C2;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#00D4FF;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  
+  <!-- Icon: Code brackets with arrow -->
+  <g transform="translate(5, 10)">
+    <!-- Left bracket -->
+    <path d="M 0 5 L 0 25 M 0 5 L 4 5 M 0 25 L 4 25" 
+          stroke="url(#gradient)" 
+          stroke-width="2.5" 
+          fill="none" 
+          stroke-linecap="round"/>
+    
+    <!-- Arrow in middle -->
+    <path d="M 12 15 L 18 15 M 15 12 L 18 15 L 15 18" 
+          stroke="url(#gradient)" 
+          stroke-width="2.5" 
+          fill="none" 
+          stroke-linecap="round" 
+          stroke-linejoin="round"/>
+    
+    <!-- Right bracket -->
+    <path d="M 24 5 L 24 25 M 24 5 L 20 5 M 24 25 L 20 25" 
+          stroke="url(#gradient)" 
+          stroke-width="2.5" 
+          fill="none" 
+          stroke-linecap="round"/>
+  </g>
+  
+  <!-- Text: DRFT -->
+  <text x="35" y="32" 
+        font-family="system-ui, -apple-system, sans-serif" 
+        font-size="24" 
+        font-weight="700" 
+        fill="#0175C2">
+    DRFT
+  </text>
+  
+  <!-- Subtitle -->
+  <text x="35" y="42" 
+        font-family="system-ui, -apple-system, sans-serif" 
+        font-size="9" 
+        font-weight="400" 
+        fill="#666" 
+        opacity="0.7">
+    Infrastructure as Code
+  </text>
+</svg>

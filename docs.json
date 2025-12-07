@@ -2,8 +2,8 @@
   "name": "DRFT",
   "description": "Infrastructure-as-code toolkit for Dart. Declare, plan, and manage your infrastructure using type-safe Dart code.",
   "github": "appsup-dart/drft",
-  "logo": "https://via.placeholder.com/200x50?text=DRFT",
-  "favicon": "https://via.placeholder.com/32x32?text=D",
+  "logo": "https://raw.githubusercontent.com/appsup-dart/drft/main/logo.svg",
+  "favicon": "https://raw.githubusercontent.com/appsup-dart/drft/main/favicon.svg",
   "color": "#0175C2",
   "sidebar": [
     {

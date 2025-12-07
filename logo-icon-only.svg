@@ -1,0 +1,33 @@
+<svg width="50" height="50" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#0175C2;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#00D4FF;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  
+  <!-- Code brackets with arrow icon -->
+  <g transform="translate(25, 25)">
+    <!-- Left bracket -->
+    <path d="M -12 -8 L -12 8 M -12 -8 L -8 -8 M -12 8 L -8 8" 
+          stroke="url(#gradient)" 
+          stroke-width="3" 
+          fill="none" 
+          stroke-linecap="round"/>
+    
+    <!-- Arrow -->
+    <path d="M -3 0 L 3 0 M 2 -2.5 L 3 0 L 2 2.5" 
+          stroke="url(#gradient)" 
+          stroke-width="3" 
+          fill="none" 
+          stroke-linecap="round" 
+          stroke-linejoin="round"/>
+    
+    <!-- Right bracket -->
+    <path d="M 12 -8 L 12 8 M 12 -8 L 8 -8 M 12 8 L 8 8" 
+          stroke="url(#gradient)" 
+          stroke-width="3" 
+          fill="none" 
+          stroke-linecap="round"/>
+  </g>
+</svg>
