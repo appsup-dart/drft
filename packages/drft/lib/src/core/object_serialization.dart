@@ -320,6 +320,7 @@ class ObjectSerialization {
   ///
   /// Handles:
   /// - Primitive types: null, String, num, bool
+  /// - Enums: Serialized as their string name
   /// - Collections: List, Map
   /// - Custom serializers: Uses registered custom serializers
   /// - Objects: Recursively serialized using [toJson]
@@ -334,6 +335,11 @@ class ObjectSerialization {
 
     if (value == null) return null;
     if (value is String || value is num || value is bool) return value;
+
+    // Handle enums - serialize as their string name
+    if (_isEnum(value)) {
+      return _enumToString(value);
+    }
 
     // Check for custom serializer
     // Check all registered types to see if value is an instance of that type
@@ -402,6 +408,16 @@ class ObjectSerialization {
     if (value == null) return null;
 
     if (expectedTypeMirror == null) return value;
+
+    // Handle enum deserialization
+    if (_isEnumType(expectedTypeMirror)) {
+      if (value is! String) {
+        throw ArgumentError(
+          'Expected String for enum value, got ${value.runtimeType}',
+        );
+      }
+      return _stringToEnum(expectedTypeMirror, value);
+    }
 
     // Check for custom deserializer if expectedTypeMirror is provided
     final reflectedType = expectedTypeMirror.reflectedType;
@@ -479,6 +495,60 @@ class ObjectSerialization {
     // For non-list types, use _isInstanceOfType
     final expectedType = expectedTypeMirror.reflectedType;
     return _isInstanceOfType(value, expectedType);
+  }
+
+  /// Check if a value is an enum
+  bool _isEnum(dynamic value) {
+    if (value == null) return false;
+    final mirror = reflect(value);
+    final classMirror = mirror.type;
+    return classMirror.isEnum;
+  }
+
+  /// Check if a TypeMirror represents an enum type
+  bool _isEnumType(TypeMirror typeMirror) {
+    if (typeMirror is! ClassMirror) return false;
+    return typeMirror.isEnum;
+  }
+
+  /// Convert an enum value to its string name
+  String _enumToString(dynamic enumValue) {
+    // Use toString() and extract the value name after the dot
+    // we cannot use the name getter as it uses extension methods which is not supported by reflection
+    final stringRep = enumValue.toString();
+    final dotIndex = stringRep.indexOf('.');
+    if (dotIndex >= 0) {
+      return stringRep.substring(dotIndex + 1);
+    }
+    return stringRep;
+  }
+
+  /// Convert a string to an enum value
+  /// The string should be in the format "EnumName.valueName" or just "valueName"
+  dynamic _stringToEnum(TypeMirror enumTypeMirror, String value) {
+    if (enumTypeMirror is! ClassMirror || !enumTypeMirror.isEnum) {
+      throw ArgumentError('Type is not an enum');
+    }
+
+    // Try to find the enum value by name
+    // The value can be either "EnumName.valueName" or just "valueName"
+    final valueName = value.contains('.') ? value.split('.').last : value;
+
+    for (final declaration in enumTypeMirror.declarations.values) {
+      if (declaration is VariableMirror && declaration.isStatic) {
+        final name = MirrorSystem.getName(declaration.simpleName);
+        if (name == valueName) {
+          // Get the enum value using reflection
+          final instanceMirror =
+              enumTypeMirror.getField(declaration.simpleName);
+          return instanceMirror.reflectee;
+        }
+      }
+    }
+
+    throw ArgumentError(
+      'Enum value "$value" not found in ${MirrorSystem.getName(enumTypeMirror.simpleName)}',
+    );
   }
 
   /// Check if a value is an instance of a given type

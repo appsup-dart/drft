@@ -463,6 +463,135 @@ void main() {
       });
     });
 
+    group('Enums', () {
+      test('can serialize enum value', () {
+        final obj = ObjectWithEnum(platform: TestPlatform.ios);
+        final json = ObjectSerialization.instance.toJson(obj);
+
+        expect(json['.type'], 'drft.ObjectWithEnum');
+        expect(json['platform'], equals('ios'));
+      });
+
+      test('can deserialize enum value', () {
+        final json = {
+          '.type': 'drft.ObjectWithEnum',
+          'platform': 'android',
+        };
+
+        final obj = ObjectSerialization.instance.fromJson<ObjectWithEnum>(json);
+        expect(obj.platform, equals(TestPlatform.android));
+      });
+
+      test('round-trip serialization and deserialization preserves enum', () {
+        final original = ObjectWithEnum(platform: TestPlatform.web);
+        final json = ObjectSerialization.instance.toJson(original);
+        final deserialized =
+            ObjectSerialization.instance.fromJson<ObjectWithEnum>(json);
+
+        expect(deserialized.platform, equals(original.platform));
+        expect(deserialized.platform, equals(TestPlatform.web));
+      });
+
+      test('can serialize nullable enum', () {
+        final obj = ObjectWithNullableEnum(platform: null);
+        final json = ObjectSerialization.instance.toJson(obj);
+
+        expect(json['platform'], isNull);
+      });
+
+      test('can deserialize nullable enum', () {
+        final json = {
+          '.type': 'drft.ObjectWithNullableEnum',
+          'platform': null,
+        };
+
+        final obj =
+            ObjectSerialization.instance.fromJson<ObjectWithNullableEnum>(json);
+        expect(obj.platform, isNull);
+      });
+
+      test('can serialize and deserialize nullable enum with value', () {
+        final original = ObjectWithNullableEnum(platform: TestPlatform.ios);
+        final json = ObjectSerialization.instance.toJson(original);
+        final deserialized =
+            ObjectSerialization.instance.fromJson<ObjectWithNullableEnum>(json);
+
+        expect(deserialized.platform, equals(original.platform));
+        expect(deserialized.platform, equals(TestPlatform.ios));
+      });
+
+      test('can serialize enum in list', () {
+        final obj = ObjectWithEnumList(
+          platforms: [TestPlatform.ios, TestPlatform.android, TestPlatform.web],
+        );
+        final json = ObjectSerialization.instance.toJson(obj);
+
+        expect(json['platforms'], isA<List>());
+        expect(json['platforms'], equals(['ios', 'android', 'web']));
+      });
+
+      test('can deserialize enum in list', () {
+        final json = {
+          '.type': 'drft.ObjectWithEnumList',
+          'platforms': ['ios', 'android', 'web'],
+        };
+
+        final obj =
+            ObjectSerialization.instance.fromJson<ObjectWithEnumList>(json);
+        expect(obj.platforms, isA<List<TestPlatform>>());
+        expect(
+          obj.platforms,
+          equals([TestPlatform.ios, TestPlatform.android, TestPlatform.web]),
+        );
+      });
+
+      test('round-trip serialization preserves enum list', () {
+        final original = ObjectWithEnumList(
+          platforms: [TestPlatform.web, TestPlatform.ios],
+        );
+        final json = ObjectSerialization.instance.toJson(original);
+        final deserialized =
+            ObjectSerialization.instance.fromJson<ObjectWithEnumList>(json);
+
+        expect(deserialized.platforms, equals(original.platforms));
+      });
+
+      test('can serialize enum in nested object', () {
+        final nested = ObjectWithEnum(platform: TestPlatform.android);
+        final obj = ObjectWithNestedEnum(nested: nested);
+        final json = ObjectSerialization.instance.toJson(obj);
+
+        expect(json['nested'], isA<Map>());
+        expect(json['nested']['platform'], equals('android'));
+      });
+
+      test('can deserialize enum in nested object', () {
+        final json = {
+          '.type': 'drft.ObjectWithNestedEnum',
+          'nested': {
+            '.type': 'drft.ObjectWithEnum',
+            'platform': 'web',
+          },
+        };
+
+        final obj =
+            ObjectSerialization.instance.fromJson<ObjectWithNestedEnum>(json);
+        expect(obj.nested.platform, equals(TestPlatform.web));
+      });
+
+      test('throws error for invalid enum value', () {
+        final json = {
+          '.type': 'drft.ObjectWithEnum',
+          'platform': 'invalid_platform',
+        };
+
+        expect(
+          () => ObjectSerialization.instance.fromJson<ObjectWithEnum>(json),
+          throwsA(isA<ArgumentError>()),
+        );
+      });
+    });
+
     group('Non-serializable Fields', () {
       test('serializes function to string representation', () {
         final resource = TestResourceWithFunction(
@@ -754,5 +883,45 @@ class ObjectWithNestedStringList {
 
   ObjectWithNestedStringList({
     required this.matrix,
+  });
+}
+
+// Test enum for enum serialization tests
+enum TestPlatform {
+  ios,
+  android,
+  web,
+}
+
+// Test classes for enum serialization
+class ObjectWithEnum {
+  final TestPlatform platform;
+
+  ObjectWithEnum({
+    required this.platform,
+  });
+}
+
+class ObjectWithNullableEnum {
+  final TestPlatform? platform;
+
+  ObjectWithNullableEnum({
+    this.platform,
+  });
+}
+
+class ObjectWithEnumList {
+  final List<TestPlatform> platforms;
+
+  ObjectWithEnumList({
+    required this.platforms,
+  });
+}
+
+class ObjectWithNestedEnum {
+  final ObjectWithEnum nested;
+
+  ObjectWithNestedEnum({
+    required this.nested,
   });
 }
