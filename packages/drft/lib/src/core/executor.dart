@@ -15,12 +15,14 @@ class OperationResult {
   final ResourceState? newState;
   final bool success;
   final String? error;
+  final StackTrace? stackTrace;
 
   OperationResult({
     required this.operation,
     this.newState,
     this.success = true,
     this.error,
+    this.stackTrace,
   });
 
   factory OperationResult.success({
@@ -37,11 +39,13 @@ class OperationResult {
   factory OperationResult.failure({
     required Operation operation,
     required String error,
+    StackTrace? stackTrace,
   }) {
     return OperationResult(
       operation: operation,
       success: false,
       error: error,
+      stackTrace: stackTrace,
     );
   }
 }
@@ -106,11 +110,12 @@ class Executor {
         } on ProviderNotFoundException {
           // Re-throw ProviderNotFoundException - it should propagate to caller
           rethrow;
-        } catch (e) {
+        } catch (e, stackTrace) {
           results.add(
             OperationResult.failure(
               operation: operation,
               error: e.toString(),
+              stackTrace: stackTrace,
             ),
           );
           // Error handling strategy: Continue executing remaining operations

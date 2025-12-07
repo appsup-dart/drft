@@ -27,6 +27,7 @@ class PlanCommand {
       );
 
     final results = parser.parse(args);
+    final verbose = results['verbose'] == true;
 
     try {
       if (stack == null) {
@@ -35,7 +36,6 @@ class PlanCommand {
       }
 
       // Create plan
-      final verbose = results['verbose'] == true;
       stdout.writeln('Creating plan...\n');
       final plan = await stack.plan(includeVerboseInfo: verbose);
 
@@ -48,8 +48,12 @@ class PlanCommand {
       }
 
       return 0;
-    } catch (e) {
+    } catch (e, stackTrace) {
       stderr.writeln('Error creating plan: $e');
+      if (verbose) {
+        stderr.writeln('\nStack trace:');
+        stderr.writeln(stackTrace);
+      }
       return 1;
     }
   }

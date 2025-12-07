@@ -38,6 +38,9 @@ class DrftCli {
 
   /// Run the CLI with command-line arguments
   Future<int> run(List<String> args) async {
+    // Check if verbose mode is enabled
+    final verbose = args.contains('--verbose') || args.contains('-v');
+    
     try {
       // Parse only known options, allowing unknown options to pass through
       ArgResults results;
@@ -121,7 +124,10 @@ class DrftCli {
       );
     } catch (e, stackTrace) {
       stderr.writeln('Error: $e');
-      if (e is! FormatException) {
+      if (verbose) {
+        stderr.writeln('\nStack trace:');
+        stderr.writeln(stackTrace);
+      } else if (e is! FormatException) {
         stderr.writeln('Stack trace: $stackTrace');
       }
       return 1;

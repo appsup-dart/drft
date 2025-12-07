@@ -17,9 +17,16 @@ class ApplyCommand {
         'auto-approve',
         negatable: false,
         help: 'Skip interactive approval',
+      )
+      ..addFlag(
+        'verbose',
+        abbr: 'v',
+        negatable: false,
+        help: 'Show detailed output and stack traces on errors',
       );
 
     final results = parser.parse(args);
+    final verbose = results['verbose'] == true;
 
     try {
       if (stack == null) {
@@ -66,13 +73,23 @@ class ApplyCommand {
         stderr.writeln('❌ Apply failed!');
         for (final opResult in result.operations) {
           if (!opResult.success) {
-            stderr.writeln('  Failed: ${opResult.operation.type.name} - ${opResult.error}');
+            final resourceId = opResult.operation.resource?.id ?? 
+                opResult.operation.currentState?.resourceId ?? 'unknown';
+            stderr.writeln('  Failed: ${opResult.operation.type.name} $resourceId - ${opResult.error}');
+            if (verbose && opResult.stackTrace != null) {
+              stderr.writeln('    Stack trace:');
+              stderr.writeln(opResult.stackTrace.toString());
+            }
           }
         }
         return 1;
       }
-    } catch (e) {
+    } catch (e, stackTrace) {
       stderr.writeln('Error applying plan: $e');
+      if (verbose) {
+        stderr.writeln('\nStack trace:');
+        stderr.writeln(stackTrace);
+      }
       return 1;
     }
   }

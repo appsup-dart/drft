@@ -3,6 +3,7 @@ library;
 
 import 'dart:io';
 
+import 'package:args/args.dart';
 import 'package:drft/drft.dart';
 
 /// Refresh command implementation
@@ -11,6 +12,17 @@ class RefreshCommand {
     required DrftStack stack,
     required List<String> args,
   }) async {
+    final parser = ArgParser()
+      ..addFlag(
+        'verbose',
+        abbr: 'v',
+        negatable: false,
+        help: 'Show detailed output and stack traces on errors',
+      );
+
+    final results = parser.parse(args);
+    final verbose = results['verbose'] == true;
+
     try {
       // Refresh state
       stdout.writeln('Refreshing state from infrastructure...\n');
@@ -29,8 +41,12 @@ class RefreshCommand {
       }
 
       return 0;
-    } catch (e) {
+    } catch (e, stackTrace) {
       stderr.writeln('Error refreshing state: $e');
+      if (verbose) {
+        stderr.writeln('\nStack trace:');
+        stderr.writeln(stackTrace);
+      }
       return 1;
     }
   }

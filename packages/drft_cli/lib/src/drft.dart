@@ -69,6 +69,9 @@ Future<void> drft(List<String> args) async {
 
   final commandStr = args[0].toLowerCase();
   final commandArgs = args.skip(1).toList();
+  
+  // Check if verbose mode is enabled (check both command args and all args)
+  final verbose = args.contains('--verbose') || args.contains('-v');
 
   final stack = _globalStack;
   if (stack == null) {
@@ -113,7 +116,10 @@ Future<void> drft(List<String> args) async {
     exit(exitCode);
   } catch (e, stackTrace) {
     stderr.writeln('Error: $e');
-    if (e is! FormatException) {
+    if (verbose) {
+      stderr.writeln('\nStack trace:');
+      stderr.writeln(stackTrace);
+    } else if (e is! FormatException) {
       stderr.writeln('Stack trace: $stackTrace');
     }
     exit(1);
@@ -135,12 +141,18 @@ Commands:
 Command Options:
   plan:
     --json              Output plan as JSON
+    --verbose, -v       Show detailed output and stack traces on errors
 
   apply:
     --auto-approve      Skip interactive approval
+    --verbose, -v       Show detailed output and stack traces on errors
 
   destroy:
     --auto-approve      Skip interactive approval
+    --verbose, -v       Show detailed output and stack traces on errors
+
+  refresh:
+    --verbose, -v       Show detailed output and stack traces on errors
 
 Examples:
   drft plan
