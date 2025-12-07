@@ -1,0 +1,38 @@
+name: drft
+description: Dart Resource Framework Toolkit - Core infrastructure-as-code toolkit
+version: 0.1.0
+homepage: https://github.com/appsup-dart/drft
+
+environment:
+  sdk: '>=3.0.0 <4.0.0'
+  
+# Note: dart:mirrors is only available in Dart VM (not Flutter)
+# This is fine for DRFT as it's a CLI/server-side tool
+
+dependencies:
+  # Core dependencies
+  meta: ^1.11.0
+  collection: ^1.18.0
+  
+  # JSON serialization
+  json_annotation: ^4.8.1
+  
+  # File I/O
+  path: ^1.8.3
+  
+  # Async utilities
+  async: ^2.11.0
+
+dev_dependencies:
+  # Testing
+  test: ^1.24.0
+  mockito: ^5.4.4
+  
+  # Code generation
+  build_runner: ^2.4.7
+  json_serializable: ^6.7.1
+  
+  # Linting
+  lints: ^3.0.0
+  very_good_analysis: ^5.1.0
+
