@@ -1,0 +1,30 @@
+name: drft_firebase
+description: Firebase provider for DRFT - Manage Firebase projects, apps, and services
+version: 0.1.0
+homepage: https://github.com/appsup-dart/drft
+publish_to: none
+
+environment:
+  sdk: '>=3.0.0 <4.0.0'
+
+dependencies:
+  # Core DRFT framework
+  drft:
+    path: ../drft
+  
+  # Firebase Management
+  firebase_management: ^0.0.4+3
+  
+  # Core dependencies
+  meta: ^1.11.0
+  collection: ^1.18.0
+  path: ^1.8.3
+
+dev_dependencies:
+  # Testing
+  test: ^1.24.0
+  
+  # Linting
+  lints: ^3.0.0
+  very_good_analysis: ^5.1.0
+

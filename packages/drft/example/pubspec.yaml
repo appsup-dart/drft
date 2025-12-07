@@ -11,3 +11,5 @@ dependencies:
     path: ../../drft
   drft_cli:
     path: ../../drft_cli
+  drft_firebase:
+    path: ../../drft_firebase

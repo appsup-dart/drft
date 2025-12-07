@@ -6,6 +6,7 @@
 library;
 
 import 'package:drft/drft.dart';
+import 'package:drft_firebase/drft_firebase.dart';
 
 import 'mock_resources.dart';
 
@@ -75,6 +76,38 @@ DrftStack createStack({String? stateFilePath}) {
     },
   );
 
+  // Firebase resources example
+  // Note: Firebase project creation/deletion is not supported via API
+  // These resources will only work for reading existing projects/apps
+  final firebaseProject = const FirebaseProject(
+    id: 'firebase.project1',
+    projectId: 'appsup-test',
+    displayName: 'Example Firebase Project',
+  );
+
+  final firebaseIosApp = FirebaseApp(
+    id: 'firebase.app.ios',
+    projectId: firebaseProject.projectId,
+    platform: FirebaseAppPlatform.ios,
+    displayName: 'Example iOS App',
+    bundleId: 'com.example.myapp',
+  );
+
+  final firebaseAndroidApp = FirebaseApp(
+    id: 'firebase.app.android',
+    projectId: firebaseProject.projectId,
+    platform: FirebaseAppPlatform.android,
+    displayName: 'Example Android App',
+    packageName: 'com.example.myapp',
+  );
+
+  final firebaseWebApp = FirebaseApp(
+    id: 'firebase.app.web',
+    projectId: firebaseProject.projectId,
+    platform: FirebaseAppPlatform.web,
+    displayName: 'Example Web App',
+  );
+
   final resources = [
     database,
     webServer1,
@@ -82,12 +115,17 @@ DrftStack createStack({String? stateFilePath}) {
     loadBalancer,
     bundleId,
     provisioningProfile,
+    firebaseProject,
+    firebaseIosApp,
+    firebaseAndroidApp,
+    firebaseWebApp,
   ];
 
   // Create stack
   return DrftStack(
     name: 'example-stack',
     providers: [
+      FirebaseProvider(),
       MockProvider(
         storagePath: '.drft/mock-provider-state.json',
       ),

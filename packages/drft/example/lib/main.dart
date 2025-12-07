@@ -25,6 +25,8 @@ Future<void> main() async {
     stateFilePath: '.drft/example-state.json',
   );
 
+  await stack.refresh();
+
   print('📦 Stack: ${stack.name}');
   print('   Resources: ${stack.resources.length}\n');
 
