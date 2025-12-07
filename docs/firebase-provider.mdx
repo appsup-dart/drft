@@ -1,11 +1,11 @@
 # Firebase Provider (`drft_firebase`)
 
-The Firebase provider enables DRFT to manage Firebase projects, apps, and services - essential infrastructure for Flutter applications.
+The Firebase provider enables DRFT to manage Firebase projects and apps - essential infrastructure for Flutter applications.
 
 ## Why Firebase Provider?
 
 - **Flutter Ecosystem**: Most Flutter apps use Firebase for backend services
-- **Comprehensive Configuration**: Projects, apps, authentication, databases, storage
+- **Comprehensive Configuration**: Projects and apps for iOS, Android, and Web
 - **Terraform Gap**: Limited Firebase support in Terraform
 - **High Value**: Solves real pain points for Flutter developers
 
@@ -20,181 +20,130 @@ dependencies:
 
 ## Configuration
 
+The Firebase provider uses the `firebase_management` package and supports Application Default Credentials (ADC) or explicit credential configuration.
+
 ```dart
 import 'package:drft/drft.dart';
 import 'package:drft_firebase/drft_firebase.dart';
+import 'package:firebase_management/firebase_management.dart';
 
 final provider = FirebaseProvider(
-  projectId: 'my-project-id',
-  credentials: FirebaseCredentials.fromServiceAccount('path/to/service-account.json'),
-  // Or from environment
-  // credentials: FirebaseCredentials.fromEnvironment(),
+  // Optional: provide credentials explicitly
+  // If not provided, will use Application Default Credentials
+  credentials: Credentials.fromServiceAccount('path/to/service-account.json'),
 );
 ```
+
+### Authentication
+
+The provider supports multiple authentication methods:
+
+1. **Application Default Credentials (ADC)** - Recommended for local development
+   ```bash
+   gcloud auth application-default login
+   ```
+
+2. **Service Account JSON** - For production and CI/CD
+   ```dart
+   FirebaseProvider(
+     credentials: Credentials.fromServiceAccount('service-account.json'),
+   )
+   ```
+
+3. **Environment Variables** - Set `GOOGLE_APPLICATION_CREDENTIALS`
+   ```bash
+   export GOOGLE_APPLICATION_CREDENTIALS=/path/to/service-account.json
+   ```
 
 ## Resources
 
 ### Firebase Project
 
+Represents a Firebase project. Projects can be read but creation and deletion must be done through the Firebase Console or Google Cloud Console.
+
 ```dart
 FirebaseProject(
-  name: 'my-firebase-project',
-  projectId: 'my-project-id',
+  id: 'my-project',
+  projectId: 'my-project-id',  // Must match existing Firebase project
   displayName: 'My Firebase Project',
 )
 ```
 
+**Properties:**
+- `id` (required): Unique identifier for the resource in DRFT
+- `projectId` (required): The Firebase project ID (must be globally unique)
+- `displayName` (required): Display name for the project
+
+**Operations:**
+- ✅ Read: Verify project exists and get current state
+- ❌ Create: Not supported (create via Firebase Console)
+- ⚠️ Update: Limited (verifies project exists)
+- ❌ Delete: Not supported (delete via Firebase Console)
+
 ### Firebase App
 
+Represents a Firebase app (iOS, Android, or Web) within a Firebase project. Supports full CRUD operations.
+
 ```dart
+// iOS App
 FirebaseApp(
-  name: 'ios-app',
-  projectId: project.id,
-  platform: 'ios',
-  bundleId: 'com.example.app',
-  appStoreId: '1234567890', // Optional
+  id: 'ios-app',
+  projectId: 'my-project-id',
+  platform: FirebaseAppPlatform.ios,
+  displayName: 'My iOS App',
+  bundleId: 'com.example.app',  // Required for iOS
 )
 
+// Android App
 FirebaseApp(
-  name: 'android-app',
-  projectId: project.id,
-  platform: 'android',
-  packageName: 'com.example.app',
-  sha1Fingerprints: ['AA:BB:CC:...'], // Optional
+  id: 'android-app',
+  projectId: 'my-project-id',
+  platform: FirebaseAppPlatform.android,
+  displayName: 'My Android App',
+  packageName: 'com.example.app',  // Required for Android
 )
 
+// Web App
 FirebaseApp(
-  name: 'web-app',
-  projectId: project.id,
-  platform: 'web',
-  appId: 'web-app-id',
+  id: 'web-app',
+  projectId: 'my-project-id',
+  platform: FirebaseAppPlatform.web,
+  displayName: 'My Web App',
 )
 ```
 
-### Firebase Authentication
+**Properties:**
+- `id` (required): Unique identifier for the resource in DRFT
+- `projectId` (required): The Firebase project ID this app belongs to
+- `platform` (required): `FirebaseAppPlatform.ios`, `.android`, or `.web`
+- `displayName` (required): Display name of the app
+- `bundleId` (optional): Bundle ID for iOS apps (required when platform is iOS)
+- `packageName` (optional): Package name for Android apps (required when platform is Android)
 
-```dart
-FirebaseAuth(
-  projectId: project.id,
-  enabledProviders: [
-    'email',
-    'google',
-    'apple',
-    'facebook',
-    'twitter',
-  ],
-  emailVerification: true,
-  emailLinkSignIn: true,
-  anonymousSignIn: true,
-  multiFactorAuth: MultiFactorAuth(
-    enabled: true,
-    providers: ['phone'],
-  ),
-  passwordPolicy: PasswordPolicy(
-    minLength: 8,
-    requireUppercase: true,
-    requireLowercase: true,
-    requireNumbers: true,
-    requireSpecialChars: true,
-  ),
-)
-```
+**Operations:**
+- ✅ Create: Creates new Firebase app for the specified platform
+- ✅ Read: Reads current app state from Firebase
+- ✅ Update: Updates app display name (other properties are immutable)
+- ⚠️ Delete: Placeholder (API support pending)
 
-### Firestore Database
+**Immutable Properties:**
+Once created, the following properties cannot be changed:
+- `platform` - Cannot change app platform
+- `bundleId` - Cannot change iOS bundle ID
+- `packageName` - Cannot change Android package name
 
-```dart
-FirestoreDatabase(
-  name: 'main-database',
-  projectId: project.id,
-  location: 'us-central',
-  mode: 'FIRESTORE_NATIVE', // or 'DATASTORE_MODE'
-  rules: '''
-    rules_version = '2';
-    service cloud.firestore {
-      match /databases/{database}/documents {
-        match /{document=**} {
-          allow read, write: if request.auth != null;
-        }
-      }
-    }
-  ''',
-  indexes: [
-    FirestoreIndex(
-      collection: 'users',
-      fields: [
-        IndexField(field: 'email', order: 'ASCENDING'),
-        IndexField(field: 'createdAt', order: 'DESCENDING'),
-      ],
-    ),
-  ],
-)
-```
+**Updatable Properties:**
+- `displayName` - Can be updated using the `updateApp` method
 
-### Cloud Storage
+### Coming Soon
 
-```dart
-CloudStorageBucket(
-  name: 'app-storage',
-  projectId: project.id,
-  location: 'us-central',
-  storageClass: 'STANDARD',
-  rules: '''
-    rules_version = '2';
-    service firebase.storage {
-      match /b/{bucket}/o {
-        match /{allPaths=**} {
-          allow read: if request.auth != null;
-          allow write: if request.auth != null 
-            && request.resource.size < 5 * 1024 * 1024; // 5MB limit
-        }
-      }
-    }
-  ''',
-)
-```
+The following resources are planned for future releases:
 
-### Remote Config
-
-```dart
-RemoteConfig(
-  name: 'app-config',
-  projectId: project.id,
-  parameters: {
-    'api_url': RemoteConfigParameter(
-      defaultValue: 'https://api.example.com',
-      description: 'API endpoint URL',
-    ),
-    'feature_enabled': RemoteConfigParameter(
-      defaultValue: 'false',
-      valueType: 'boolean',
-    ),
-  },
-  conditions: [
-    RemoteConfigCondition(
-      name: 'ios',
-      expression: 'device.os == "ios"',
-    ),
-  ],
-)
-```
-
-### App Check
-
-```dart
-AppCheck(
-  projectId: project.id,
-  iosAppId: iosApp.id,
-  androidAppId: androidApp.id,
-  webAppId: webApp.id,
-  iosProvider: AppCheckProvider.appAttest(
-    appleAppAttestKeyId: 'key-id',
-  ),
-  androidProvider: AppCheckProvider.playIntegrity(),
-  webProvider: AppCheckProvider.recaptcha(
-    siteKey: 'recaptcha-site-key',
-  ),
-)
-```
+- **Firebase Authentication** - Configure authentication providers and settings
+- **Firestore Database** - Create and manage Firestore databases
+- **Cloud Storage** - Manage Cloud Storage buckets
+- **Remote Config** - Configure remote configuration parameters
+- **App Check** - Set up App Check providers
 
 ## Complete Example
 
@@ -207,121 +156,167 @@ void main() async {
     name: 'flutter-app-backend',
     providers: [
       FirebaseProvider(
-        projectId: 'my-flutter-app',
-        credentials: FirebaseCredentials.fromServiceAccount('service-account.json'),
+        // Uses Application Default Credentials if not provided
+        // credentials: Credentials.fromServiceAccount('service-account.json'),
       ),
     ],
     resources: [
-      // Firebase Project
+      // Firebase Project (must exist in Firebase Console)
       FirebaseProject(
-        name: 'my-project',
+        id: 'my-project',
         projectId: 'my-flutter-app',
         displayName: 'My Flutter App Backend',
       ),
       
-      // Firebase Apps
+      // iOS App
       FirebaseApp(
-        name: 'ios-app',
-        projectId: project.id,
-        platform: 'ios',
+        id: 'ios-app',
+        projectId: 'my-flutter-app',
+        platform: FirebaseAppPlatform.ios,
+        displayName: 'My iOS App',
         bundleId: 'com.example.app',
       ),
       
+      // Android App
       FirebaseApp(
-        name: 'android-app',
-        projectId: project.id,
-        platform: 'android',
+        id: 'android-app',
+        projectId: 'my-flutter-app',
+        platform: FirebaseAppPlatform.android,
+        displayName: 'My Android App',
         packageName: 'com.example.app',
       ),
       
+      // Web App
       FirebaseApp(
-        name: 'web-app',
-        projectId: project.id,
-        platform: 'web',
-      ),
-      
-      // Authentication
-      FirebaseAuth(
-        projectId: project.id,
-        enabledProviders: ['email', 'google', 'apple'],
-        emailVerification: true,
-      ),
-      
-      // Firestore Database
-      FirestoreDatabase(
-        name: 'main-db',
-        projectId: project.id,
-        location: 'us-central',
-        rules: firestoreRules,
-      ),
-      
-      // Cloud Storage
-      CloudStorageBucket(
-        name: 'app-storage',
-        projectId: project.id,
-        location: 'us-central',
-        rules: storageRules,
-      ),
-      
-      // Remote Config
-      RemoteConfig(
-        name: 'app-config',
-        projectId: project.id,
-        parameters: {
-          'api_url': RemoteConfigParameter(
-            defaultValue: 'https://api.example.com',
-          ),
-        },
+        id: 'web-app',
+        projectId: 'my-flutter-app',
+        platform: FirebaseAppPlatform.web,
+        displayName: 'My Web App',
       ),
     ],
   );
   
+  // Plan changes
   final plan = await stack.plan();
-  await stack.apply(plan);
+  print(plan.summary);
+  
+  // Apply changes
+  final result = await stack.apply(plan);
+  print(result.summary);
 }
+```
+
+## Usage Examples
+
+### Creating Firebase Apps
+
+```dart
+final stack = DrftStack(
+  name: 'my-stack',
+  providers: [FirebaseProvider()],
+  resources: [
+    FirebaseProject(
+      id: 'project',
+      projectId: 'my-project-id',
+      displayName: 'My Project',
+    ),
+    FirebaseApp(
+      id: 'ios-app',
+      projectId: 'my-project-id',
+      platform: FirebaseAppPlatform.ios,
+      displayName: 'iOS App',
+      bundleId: 'com.example.app',
+    ),
+  ],
+);
+
+// Plan and apply
+final plan = await stack.plan();
+await stack.apply(plan);
+```
+
+### Updating App Display Name
+
+```dart
+// After initial creation, you can update the display name
+final updatedApp = FirebaseApp(
+  id: 'ios-app',
+  projectId: 'my-project-id',
+  platform: FirebaseAppPlatform.ios,
+  displayName: 'Updated App Name',  // Changed display name
+  bundleId: 'com.example.app',
+);
+
+final plan = await stack.plan();
+await stack.apply(plan);
+```
+
+### Reading Current State
+
+```dart
+// Refresh state from actual Firebase infrastructure
+final currentState = await stack.refresh();
+
+// Access app state
+final appState = currentState.resources['ios-app'] as FirebaseAppState;
+print('App ID: ${appState.appId}');
+print('Display Name: ${appState.resource.displayName}');
 ```
 
 ## Implementation Notes
 
 ### Authentication
 
-The Firebase provider uses the Firebase Admin SDK for server-side operations:
-- Service account JSON file
-- Environment variables
-- Application Default Credentials (ADC)
+The Firebase provider uses the `firebase_management` package and supports:
+- **Application Default Credentials (ADC)** - Recommended for local development
+- **Service Account JSON** - For production and CI/CD
+- **Environment Variables** - Via `GOOGLE_APPLICATION_CREDENTIALS`
 
 ### API Limitations
 
-- Some Firebase resources have rate limits
-- Some operations are asynchronous and may take time
-- Some resources require specific project configurations
+- **Project Creation/Deletion**: Must be done through Firebase Console or Google Cloud Console
+- **App Deletion**: Currently not supported by the API (placeholder implementation)
+- **Immutable Properties**: Platform, bundleId, and packageName cannot be changed after creation
+- **Rate Limits**: Firebase Management API has rate limits that may affect operations
 
 ### State Management
 
-Firebase resources are tracked by their resource IDs:
-- Projects: `projects/{project_id}`
-- Apps: `projects/{project_id}/apps/{app_id}`
-- Databases: `projects/{project_id}/databases/{database_id}`
+Firebase resources are tracked by their resource IDs in DRFT:
+- Projects: Tracked by `projectId`
+- Apps: Tracked by `id` with matching logic based on platform and bundleId/packageName/displayName
+
+The provider automatically retrieves the Firebase-assigned `appId` after creation, which is stored in `FirebaseAppState`.
+
+### Resource Matching
+
+When reading Firebase apps, the provider matches apps using:
+1. Platform match (iOS, Android, or Web)
+2. Bundle ID match (for iOS) or Package Name match (for Android)
+3. Display Name match (fallback)
 
 ## Resources Roadmap
 
-### Phase 1 (Initial)
-- ✅ Firebase Projects
-- ✅ Firebase Apps (iOS, Android, Web)
-- ✅ Firebase Authentication
-- ✅ Firestore Databases
-- ✅ Cloud Storage Buckets
+### Phase 1 (Current) ✅
+- ✅ Firebase Projects (read support)
+- ✅ Firebase Apps (iOS, Android, Web) - full CRUD operations
+  - ✅ Create apps
+  - ✅ Read apps
+  - ✅ Update display name
+  - ⚠️ Delete apps (API support pending)
 
-### Phase 2
+### Phase 2 (Planned)
+- 🎯 APNS Auth Keys (resource defined, provider methods pending)
+- 🎯 Android SHA Fingerprints (resource defined, provider methods pending)
+- 🎯 Firebase Authentication configuration
+- 🎯 Firestore Databases
+- 🎯 Cloud Storage Buckets
+
+### Phase 3 (Future)
 - 🎯 Remote Config
 - 🎯 App Check
 - 🎯 Cloud Functions configuration
 - 🎯 Cloud Messaging (FCM)
 - 🎯 Realtime Database
-
-### Phase 3
-- 🎯 Firebase Extensions
 - 🎯 Firebase Hosting
 - 🎯 Cloud Firestore Indexes
-- 🎯 IAM roles and permissions
 
