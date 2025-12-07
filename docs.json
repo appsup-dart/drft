@@ -4,93 +4,45 @@
   "github": "appsup-dart/drft",
   "logo": "https://raw.githubusercontent.com/appsup-dart/drft/main/logo-icon-only.svg",
   "favicon": "https://raw.githubusercontent.com/appsup-dart/drft/main/favicon.svg",
-  "color": "#0175C2",
+  "theme": "#0175C2",
   "sidebar": [
-    {
-      "group": "Getting Started",
-      "pages": [
-        {
-          "title": "Introduction",
-          "href": "/",
-          "icon": "rocket"
-        },
-        {
-          "title": "Getting Started",
-          "href": "/getting-started",
-          "icon": "play"
-        },
-        {
-          "title": "Next Steps",
-          "href": "/next-steps",
-          "icon": "arrow-right"
-        }
+    [
+      "Getting Started",
+      [
+        ["Introduction", "/"],
+        ["Getting Started", "/getting-started"],
+        ["Next Steps", "/next-steps"]
       ]
-    },
-    {
-      "group": "Core Concepts",
-      "pages": [
-        {
-          "title": "Core Concepts",
-          "href": "/concepts"
-        },
-        {
-          "title": "Architecture",
-          "href": "/architecture"
-        },
-        {
-          "title": "State Management",
-          "href": "/resource-state-provider-relationship"
-        }
+    ],
+    [
+      "Core Concepts",
+      [
+        ["Core Concepts", "/concepts"],
+        ["Architecture", "/architecture"],
+        ["State Management", "/resource-state-provider-relationship"]
       ]
-    },
-    {
-      "group": "Guides",
-      "pages": [
-        {
-          "title": "Resources",
-          "href": "/resources"
-        },
-        {
-          "title": "Providers",
-          "href": "/providers"
-        },
-        {
-          "title": "Dependent Resources",
-          "href": "/dependent-resources"
-        }
+    ],
+    [
+      "Guides",
+      [
+        ["Resources", "/resources"],
+        ["Providers", "/providers"],
+        ["Dependent Resources", "/dependent-resources"]
       ]
-    },
-    {
-      "group": "Provider Guides",
-      "pages": [
-        {
-          "title": "Firebase Provider",
-          "href": "/firebase-provider"
-        },
-        {
-          "title": "App Store Provider",
-          "href": "/appstore-provider"
-        }
+    ],
+    [
+      "Provider Guides",
+      [
+        ["Firebase Provider", "/firebase-provider"],
+        ["App Store Provider", "/appstore-provider"]
       ]
-    },
-    {
-      "group": "Examples",
-      "pages": [
-        {
-          "title": "Examples",
-          "href": "/examples",
-          "icon": "code"
-        }
+    ],
+    ["Examples", "/examples"],
+    [
+      "Advanced",
+      [
+        ["Typed Resource States", "/typed-resource-states"]
       ]
-    },
-    {
-      "group": "Advanced",
-      "pages": [
-        {
-          "title": "Typed Resource States",
-          "href": "/typed-resource-states"
-        }
-      ]
-    }
+    ]
   ]
 }
