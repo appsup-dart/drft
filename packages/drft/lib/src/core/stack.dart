@@ -15,7 +15,7 @@ class DrftStack {
   final String name;
 
   /// List of providers used by resources in this stack
-  final List<Provider> providers;
+  final List<Provider<Resource>> providers;
 
   /// List of resources defined in this stack
   final List<Resource> resources;
@@ -90,7 +90,7 @@ class DrftStack {
         // we expect to exist, creating a complete new state
         for (final resource in resources) {
           // Find the provider that can handle this resource
-          Provider? provider;
+          Provider<Resource>? provider;
 
           // Find provider that can handle this resource
           for (final p in providers) {

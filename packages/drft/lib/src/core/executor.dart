@@ -65,7 +65,7 @@ class ApplyResult {
 
 /// Executes plans to apply infrastructure changes
 class Executor {
-  final List<Provider> providers;
+  final List<Provider<Resource>> providers;
 
   Executor({
     required this.providers,
@@ -93,7 +93,7 @@ class Executor {
         for (final resourceId in desiredState.resources.keys) {
           if (!currentState.resources.containsKey(resourceId)) {
             final resource = desiredState.resources[resourceId]!.resource;
-            if (resource is ReadOnlyResource) {
+            if (resource is ReadOnly) {
               try {
                 // Find provider for this read-only resource
                 final provider = _findProviderForResource(resource);
@@ -242,7 +242,7 @@ Apply Summary:
         ? Operation.create(resource: resourceToExecute!)
         : operation;
 
-    Provider provider;
+    Provider<Resource> provider;
     try {
       provider = _findProvider(operationToExecute);
     } on ProviderNotFoundException {
@@ -277,7 +277,7 @@ Apply Summary:
     return result;
   }
 
-  Provider _findProvider(Operation operation) {
+  Provider<Resource> _findProvider(Operation operation) {
     final resource = operation.resource ?? operation.currentState?.resource;
     if (resource == null) {
       throw DrftException('Cannot find provider: no resource in operation');
@@ -286,7 +286,7 @@ Apply Summary:
     return _findProviderForResource(resource);
   }
 
-  Provider _findProviderForResource(Resource resource) {
+  Provider<Resource> _findProviderForResource(Resource resource) {
     for (final provider in providers) {
       if (provider.canHandle(resource)) {
         return provider;
@@ -298,7 +298,7 @@ Apply Summary:
 
   Future<OperationResult> _executeOperation(
     Operation operation,
-    Provider provider,
+    Provider<Resource> provider,
   ) async {
     switch (operation.type) {
       case OperationType.create:

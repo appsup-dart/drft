@@ -642,7 +642,7 @@ class TrackingProvider extends MockProvider {
 }
 
 /// Provider that throws DrftException (not ResourceNotFoundException) for testing
-class ExceptionThrowingProvider extends Provider {
+class ExceptionThrowingProvider extends Provider<Resource> {
   ExceptionThrowingProvider()
       : super(
           name: 'exception-throwing',

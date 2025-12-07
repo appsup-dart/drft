@@ -2,6 +2,7 @@
 library;
 
 import 'package:drft/drft.dart';
+import 'firebase_resource.dart';
 
 /// State for a Firebase Project
 class FirebaseProjectState extends ResourceState {
@@ -20,7 +21,11 @@ class FirebaseProjectState extends ResourceState {
 /// - Verify the project exists
 /// - Read project information
 /// - Provide project ID for other resources that depend on it
-class FirebaseProject extends ReadOnlyResource<FirebaseProjectState> {
+///
+/// Note: FirebaseProject extends FirebaseResource for typed provider support
+/// and uses the ReadOnly mixin to mark it as read-only for the framework.
+class FirebaseProject extends FirebaseResource<FirebaseProjectState>
+    with ReadOnly {
   /// The desired project ID (must be globally unique)
   final String projectId;
 

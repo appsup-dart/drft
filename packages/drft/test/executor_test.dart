@@ -366,7 +366,7 @@ class TestReadOnlyResource extends ReadOnlyResource {
 }
 
 /// Mock provider that can be configured to fail for specific resources
-class MockProvider extends Provider {
+class MockProvider extends Provider<Resource> {
   String? shouldFailFor;
   String? shouldThrowNotFoundFor;
   ResourceState? readOnlyResourceState;

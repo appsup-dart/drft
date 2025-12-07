@@ -1,38 +1,121 @@
 # Provider Development Guide
 
-Providers are plugins that enable DRFT to manage resources on different platforms. This guide explains how to create custom providers.
+Providers are plugins that enable DRFT to manage resources on different platforms. This guide explains how to create custom providers using the typed provider pattern.
 
 ## Provider Interface
 
-All providers must implement the `Provider` interface:
+All providers must implement the `Provider` interface, which uses generics for type safety:
 
 ```dart
-abstract class Provider {
+abstract class Provider<ResourceType extends Resource> {
   String get name;
   String get version;
   
   Future<void> configure(Map<String, dynamic> config);
-  Future<ResourceState> createResource(Resource resource);
-  Future<ResourceState> readResource(String resourceId, String resourceType);
+  Future<ResourceState> createResource(ResourceType resource);
+  Future<ResourceState> readResource(ResourceType resource);
   Future<ResourceState> updateResource(
     ResourceState current,
-    Resource desired,
+    ResourceType desired,
   );
   Future<void> deleteResource(ResourceState state);
-  bool canHandle(Resource resource);
+  
+  // Automatically implemented - checks if resource is ResourceType
+  bool canHandle(Resource resource) {
+    return resource is ResourceType;
+  }
+  
   Future<void> initialize();
   Future<void> dispose();
 }
 ```
 
+## Typed Provider Pattern
+
+The `Provider` interface is generic, allowing you to specify the type of resources your provider handles. This provides:
+
+- **Type Safety**: Methods receive the correct resource type automatically
+- **Automatic Type Checking**: `canHandle()` is implemented automatically
+- **No Casting**: No need to cast resources in your methods
+- **Better IDE Support**: Full autocomplete and type checking
+
 ## Creating a Provider
 
-### Step 1: Implement Provider
+### Single Resource Type
+
+For providers that handle a single resource type:
 
 ```dart
 import 'package:drft/drft.dart';
 
-class MyCloudProvider extends Provider {
+class MyAppProvider extends Provider<MyApp> {
+  MyAppProvider() : super(
+    name: 'myapp',
+    version: '1.0.0',
+  );
+  
+  @override
+  Future<ResourceState> createResource(MyApp resource) async {
+    // No casting needed - resource is already MyApp
+    return await _createMyApp(resource);
+  }
+  
+  @override
+  Future<ResourceState> readResource(MyApp resource) async {
+    // No casting needed
+    return await _readMyApp(resource);
+  }
+  
+  // canHandle() is automatically implemented
+  // It checks if resource is MyApp
+}
+```
+
+### Multiple Resource Types via Base Class
+
+For providers that handle multiple related resource types, create a base class:
+
+```dart
+/// Base class for all MyCloud resources
+abstract class MyCloudResource extends Resource<ResourceState> {
+  const MyCloudResource({
+    required super.id,
+    super.dependencies = const [],
+  });
+}
+
+/// Virtual Machine resource
+class VirtualMachine extends MyCloudResource {
+  final String name;
+  final String image;
+  final String size;
+  
+  const VirtualMachine({
+    required String id,
+    required this.name,
+    required this.image,
+    required this.size,
+    super.dependencies = const [],
+  }) : super(id: id);
+}
+
+/// Database resource
+class Database extends MyCloudResource {
+  final String name;
+  final String engine;
+  final int storageGB;
+  
+  const Database({
+    required String id,
+    required this.name,
+    required this.engine,
+    required this.storageGB,
+    super.dependencies = const [],
+  }) : super(id: id);
+}
+
+/// Provider that handles all MyCloud resources
+class MyCloudProvider extends Provider<MyCloudResource> {
   MyCloudProvider({
     required String region,
     String? apiKey,
@@ -65,205 +148,166 @@ class MyCloudProvider extends Provider {
     await _client?.disconnect();
   }
   
+  // canHandle() is automatically implemented
+  // It checks if resource is MyCloudResource
+  
+  @override
+  Future<ResourceState> createResource(MyCloudResource resource) async {
+    // Type checking still needed for specific types
+    if (resource is VirtualMachine) {
+      return await _createVirtualMachine(resource);
+    } else if (resource is Database) {
+      return await _createDatabase(resource);
+    }
+    
+    throw ProviderNotFoundException(
+      'Resource type ${resource.runtimeType} not supported',
+    );
+  }
+  
+  Future<ResourceState> _createVirtualMachine(VirtualMachine vm) async {
+    final response = await _client!.createVM(
+      name: vm.name,
+      image: vm.image,
+      size: vm.size,
+      region: _region,
+    );
+    
+    return VirtualMachineState(
+      resource: VirtualMachine(
+        id: vm.id,
+        name: vm.name,
+        image: vm.image,
+        size: vm.size,
+      ),
+      vmId: response.id,
+      ipAddress: response.ipAddress,
+    );
+  }
+  
+  Future<ResourceState> _createDatabase(Database db) async {
+    // Implementation
+  }
+  
+  @override
+  Future<ResourceState> readResource(MyCloudResource resource) async {
+    if (resource is VirtualMachine) {
+      return await _readVirtualMachine(resource);
+    } else if (resource is Database) {
+      return await _readDatabase(resource);
+    }
+    throw ProviderNotFoundException(
+      'Resource type ${resource.runtimeType} not supported',
+    );
+  }
+  
+  @override
+  Future<ResourceState> updateResource(
+    ResourceState current,
+    MyCloudResource desired,
+  ) async {
+    // Implementation
+  }
+  
+  @override
+  Future<void> deleteResource(ResourceState state) async {
+    // Implementation
+  }
+}
+```
+
+## Example: Firebase Provider
+
+The Firebase provider demonstrates the typed provider pattern with multiple resource types:
+
+```dart
+/// Base class for Firebase resources
+abstract class FirebaseResource extends Resource<ResourceState> {
+  const FirebaseResource({
+    required super.id,
+    super.dependencies = const [],
+  });
+}
+
+/// Firebase App resource
+class FirebaseApp extends FirebaseResource {
+  final String projectId;
+  final FirebaseAppPlatform platform;
+  final String displayName;
+  // ...
+}
+
+/// Firebase Project resource (read-only)
+class FirebaseProject extends FirebaseResource with ReadOnly {
+  final String projectId;
+  final String displayName;
+  // ...
+}
+
+/// Firebase Provider
+class FirebaseProvider extends Provider<FirebaseResource> {
+  FirebaseProvider({Credential? credentials})
+      : _credentials = credentials,
+        super(name: 'firebase', version: '0.1.0');
+  
+  // canHandle() automatically checks if resource is FirebaseResource
+  
+  @override
+  Future<ResourceState> createResource(FirebaseResource resource) async {
+    if (resource is FirebaseProject) {
+      throw UnsupportedError('Firebase projects cannot be created');
+    } else if (resource is FirebaseApp) {
+      return await _createFirebaseApp(resource);
+    }
+    throw ProviderNotFoundException(
+      'Resource type ${resource.runtimeType} not supported',
+    );
+  }
+  
+  // Other methods...
+}
+```
+
+## Read-Only Resources
+
+Some resources cannot be created, updated, or deleted. Mark them with the `ReadOnly` mixin:
+
+```dart
+/// Resource that exists externally and cannot be modified
+class ExternalProject extends MyCloudResource with ReadOnly {
+  final String projectId;
+  final String displayName;
+  
+  const ExternalProject({
+    required String id,
+    required this.projectId,
+    required this.displayName,
+    super.dependencies = const [],
+  }) : super(id: id);
+}
+```
+
+The framework automatically skips create, update, and delete operations for resources with the `ReadOnly` mixin. They can still be read and used as dependencies.
+
+Alternatively, extend `ReadOnlyResource`:
+
+```dart
+class ExternalProject extends ReadOnlyResource<ExternalProjectState> {
+  // ...
+}
+```
+
+## Custom canHandle() Logic
+
+You can override `canHandle()` for custom logic:
+
+```dart
+class ConditionalProvider extends Provider<MyResource> {
   @override
   bool canHandle(Resource resource) {
-    return resource.type.startsWith('mycloud.');
-  }
-}
-```
-
-### Step 2: Implement Resource Operations
-
-```dart
-@override
-Future<ResourceState> createResource(Resource resource) async {
-  if (resource is VirtualMachine) {
-    return await _createVirtualMachine(resource);
-  } else if (resource is Database) {
-    return await _createDatabase(resource);
-  }
-  throw UnsupportedResourceTypeException(resource.type);
-}
-
-Future<ResourceState> _createVirtualMachine(VirtualMachine vm) async {
-  final response = await _client!.createVM(
-    name: vm.name,
-    image: vm.image,
-    size: vm.size,
-    region: _region,
-  );
-  
-  return ResourceState(
-    resourceId: response.id,
-    resourceType: 'mycloud.vm',
-    properties: {
-      'name': vm.name,
-      'image': vm.image,
-      'size': vm.size,
-      'ip': response.ipAddress,
-    },
-    metadata: {
-      'createdAt': DateTime.now().toIso8601String(),
-    },
-  );
-}
-
-@override
-Future<ResourceState> readResource(
-  String resourceId,
-  String resourceType,
-) async {
-  if (resourceType == 'mycloud.vm') {
-    final vm = await _client!.getVM(resourceId);
-    return ResourceState(
-      resourceId: vm.id,
-      resourceType: resourceType,
-      properties: {
-        'name': vm.name,
-        'image': vm.image,
-        'size': vm.size,
-        'ip': vm.ipAddress,
-      },
-    );
-  }
-  throw UnsupportedResourceTypeException(resourceType);
-}
-
-@override
-Future<ResourceState> updateResource(
-  ResourceState current,
-  Resource desired,
-) async {
-  // Compare current and desired states
-  // Make API calls to update only what changed
-  // Return new state
-}
-
-@override
-Future<void> deleteResource(ResourceState state) async {
-  await _client!.deleteVM(state.resourceId);
-}
-```
-
-## Example: AWS Provider
-
-```dart
-class AwsProvider extends Provider {
-  AwsProvider({
-    required String region,
-    AwsCredentials? credentials,
-  }) : _region = region,
-       _credentials = credentials,
-       super(name: 'aws', version: '1.0.0');
-  
-  final String _region;
-  final AwsCredentials? _credentials;
-  late AwsClient _client;
-  
-  @override
-  Future<void> configure(Map<String, dynamic> config) async {
-    _client = AwsClient(
-      region: config['region'] ?? _region,
-      credentials: config['credentials'] ?? _credentials,
-    );
-  }
-  
-  @override
-  Future<ResourceState> createResource(Resource resource) async {
-    switch (resource.type) {
-      case 'aws.ec2.instance':
-        return await _createEC2Instance(resource as EC2Instance);
-      case 'aws.rds.database':
-        return await _createRDSDatabase(resource as RDSDatabase);
-      case 'aws.s3.bucket':
-        return await _createS3Bucket(resource as S3Bucket);
-      default:
-        throw UnsupportedResourceTypeException(resource.type);
-    }
-  }
-  
-  Future<ResourceState> _createEC2Instance(EC2Instance instance) async {
-    final response = await _client.ec2.runInstances(
-      imageId: instance.imageId,
-      instanceType: instance.instanceType,
-      subnetId: instance.subnetId,
-      securityGroupIds: instance.securityGroupIds,
-      tags: instance.tags,
-    );
-    
-    return ResourceState(
-      resourceId: response.instanceId,
-      resourceType: 'aws.ec2.instance',
-      properties: {
-        'instanceId': response.instanceId,
-        'publicIp': response.publicIp,
-        'privateIp': response.privateIp,
-      },
-    );
-  }
-  
-  // ... other methods
-}
-```
-
-## Example: Kubernetes Provider
-
-```dart
-class KubernetesProvider extends Provider {
-  KubernetesProvider({
-    required String kubeconfig,
-    String? namespace,
-  }) : _kubeconfig = kubeconfig,
-       _namespace = namespace ?? 'default',
-       super(name: 'kubernetes', version: '1.0.0');
-  
-  final String _kubeconfig;
-  final String _namespace;
-  late KubernetesClient _client;
-  
-  @override
-  Future<void> configure(Map<String, dynamic> config) async {
-    _client = KubernetesClient.fromConfig(
-      config['kubeconfig'] ?? _kubeconfig,
-    );
-  }
-  
-  @override
-  Future<ResourceState> createResource(Resource resource) async {
-    if (resource is KubernetesDeployment) {
-      return await _createDeployment(resource);
-    } else if (resource is KubernetesService) {
-      return await _createService(resource);
-    }
-    throw UnsupportedResourceTypeException(resource.type);
-  }
-  
-  Future<ResourceState> _createDeployment(
-    KubernetesDeployment deployment,
-  ) async {
-    final k8sDeployment = V1Deployment()
-      ..metadata = (V1ObjectMeta()
-        ..name = deployment.name
-        ..namespace = _namespace)
-      ..spec = (V1DeploymentSpec()
-        ..replicas = deployment.replicas
-        ..selector = V1LabelSelector()
-        ..template = V1PodTemplateSpec());
-    
-    final created = await _client.appsV1.createNamespacedDeployment(
-      _namespace,
-      k8sDeployment,
-    );
-    
-    return ResourceState(
-      resourceId: '${_namespace}/${deployment.name}',
-      resourceType: 'kubernetes.deployment',
-      properties: {
-        'name': deployment.name,
-        'namespace': _namespace,
-        'replicas': deployment.replicas,
-      },
-    );
+    if (resource is! MyResource) return false;
+    // Additional custom logic
+    return resource.shouldBeHandledByThisProvider;
   }
 }
 ```
@@ -274,21 +318,17 @@ Providers should handle errors gracefully:
 
 ```dart
 @override
-Future<ResourceState> createResource(Resource resource) async {
+Future<ResourceState> createResource(MyCloudResource resource) async {
   try {
     // ... create resource
   } on MyCloudApiException catch (e) {
-    throw ProviderException(
+    throw DrftException(
       'Failed to create resource: ${e.message}',
-      provider: name,
-      resourceType: resource.type,
       originalError: e,
     );
   } on TimeoutException catch (e) {
-    throw ProviderException(
+    throw DrftException(
       'Timeout creating resource',
-      provider: name,
-      resourceType: resource.type,
       originalError: e,
     );
   }
@@ -321,46 +361,19 @@ class MockMyCloudClient implements MyCloudClient {
     return CreateVMResponse(id: id, ipAddress: '10.0.0.1');
   }
   
-  @override
-  Future<VM> getVM(String id) async {
-    if (!_vms.containsKey(id)) {
-      throw VMNotFoundException(id);
-    }
-    final data = _vms[id]!;
-    return VM(
-      id: data['id'],
-      name: data['name'],
-      image: data['image'],
-      size: data['size'],
-      ipAddress: data['ip'],
-    );
-  }
+  // Other methods...
 }
-```
-
-## Provider Registration
-
-Providers can be registered in several ways:
-
-1. **Built-in**: Included in DRFT core
-2. **Package**: Published as a separate package
-3. **Local**: Loaded from local files
-
-```dart
-// Load provider from package
-final provider = await ProviderLoader.loadFromPackage('drft_aws');
-
-// Load provider from file
-final provider = await ProviderLoader.loadFromFile('lib/providers/my_provider.dart');
 ```
 
 ## Best Practices
 
-1. **Idempotency**: Operations should be idempotent
-2. **Error Messages**: Provide clear, actionable error messages
-3. **Retry Logic**: Implement retry logic for transient failures
-4. **Rate Limiting**: Respect API rate limits
-5. **Connection Pooling**: Reuse connections when possible
-6. **Logging**: Log all operations for debugging
-7. **Validation**: Validate resource properties before API calls
-
+1. **Type Safety**: Use the typed provider pattern for better type safety
+2. **Base Classes**: Create base classes for related resource types
+3. **Read-Only Resources**: Use `ReadOnly` mixin or `ReadOnlyResource` for external resources
+4. **Idempotency**: Operations should be idempotent
+5. **Error Messages**: Provide clear, actionable error messages
+6. **Retry Logic**: Implement retry logic for transient failures
+7. **Rate Limiting**: Respect API rate limits
+8. **Connection Pooling**: Reuse connections when possible
+9. **Logging**: Log all operations for debugging
+10. **Validation**: Validate resource properties before API calls

@@ -102,11 +102,46 @@ abstract class Resource<StateType extends ResourceState> {
 ///         );
 /// }
 /// ```
+///
+/// **Alternative:** If your resource extends a base class and cannot extend
+/// `ReadOnlyResource`, use the `ReadOnly` mixin instead (see below).
 @immutable
 abstract class ReadOnlyResource<StateType extends ResourceState>
-    extends Resource<StateType> {
+    extends Resource<StateType> with ReadOnly {
   const ReadOnlyResource({
     required super.id,
     super.dependencies = const [],
   });
+}
+
+/// Mixin for marking resources as read-only
+///
+/// Use this mixin when a resource extends a base class (like `FirebaseResource`)
+/// and cannot extend `ReadOnlyResource` directly.
+///
+/// Example:
+/// ```dart
+/// class FirebaseProject extends FirebaseResource<FirebaseProjectState>
+///     with ReadOnly {
+///   final String projectId;
+///   final String displayName;
+///
+///   const FirebaseProject({
+///     required String id,
+///     required this.projectId,
+///     required this.displayName,
+///     List<Resource> dependencies = const [],
+///   }) : super(
+///           id: id,
+///           dependencies: dependencies,
+///         );
+/// }
+/// ```
+///
+/// The framework checks for `is ReadOnly` to determine if a resource is read-only.
+/// Both `ReadOnlyResource` (which uses this mixin) and resources that directly
+/// use this mixin will be treated as read-only.
+mixin ReadOnly {
+  // Marker mixin - no additional functionality needed
+  // The framework checks for `is ReadOnly` to determine read-only behavior
 }

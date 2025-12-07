@@ -20,7 +20,7 @@ import 'state.dart';
 ///
 /// This provider persists state to a file, making it useful for examples
 /// and testing scenarios where you want state to persist across runs.
-class MockProvider extends Provider {
+class MockProvider extends Provider<Resource> {
   final Map<String, ResourceState> _resources = {};
   final String? _storagePath;
   bool _initialized = false;

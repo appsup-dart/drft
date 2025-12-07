@@ -2,6 +2,7 @@
 library;
 
 import 'package:drft/drft.dart';
+import 'firebase_resource.dart';
 
 /// Platform types for Firebase apps
 enum FirebaseAppPlatform {
@@ -24,7 +25,7 @@ class FirebaseAppState extends ResourceState {
 /// Firebase App resource
 ///
 /// Represents a Firebase app (iOS, Android, or Web) within a Firebase project.
-class FirebaseApp extends Resource<FirebaseAppState> {
+class FirebaseApp extends FirebaseResource<FirebaseAppState> {
   /// The Firebase project ID this app belongs to
   final String projectId;
 

@@ -518,7 +518,7 @@ void main() {
 
 ## Data Sources (Read-Only External Resources)
 
-Some resources represent external infrastructure that cannot be created, updated, or deleted through DRFT. These are called **read-only resources** and extend the `ReadOnlyResource` base class.
+Some resources represent external infrastructure that cannot be created, updated, or deleted through DRFT. These are called **read-only resources** and can be marked using either the `ReadOnlyResource` base class or the `ReadOnly` mixin.
 
 ### When to Use Data Sources
 
@@ -530,9 +530,15 @@ Data sources are appropriate for:
 
 ### Implementing a Data Source
 
+#### Option 1: Extend ReadOnlyResource
+
 Extend `ReadOnlyResource` instead of `Resource`:
 
 ```dart
+class FirebaseProjectState extends ResourceState {
+  FirebaseProjectState({required super.resource});
+}
+
 class FirebaseProject extends ReadOnlyResource<FirebaseProjectState> {
   final String projectId;
   final String displayName;
@@ -549,7 +555,34 @@ class FirebaseProject extends ReadOnlyResource<FirebaseProjectState> {
 }
 ```
 
-`ReadOnlyResource` is automatically detected by the planner and executor, so no additional configuration is needed.
+#### Option 2: Use ReadOnly Mixin
+
+If your resource extends a base class (e.g., for typed provider support), use the `ReadOnly` mixin:
+
+```dart
+/// Base class for Firebase resources (for typed provider)
+abstract class FirebaseResource extends Resource<ResourceState> {
+  const FirebaseResource({
+    required super.id,
+    super.dependencies = const [],
+  });
+}
+
+/// Firebase Project with ReadOnly mixin
+class FirebaseProject extends FirebaseResource with ReadOnly {
+  final String projectId;
+  final String displayName;
+  
+  const FirebaseProject({
+    required String id,
+    required this.projectId,
+    required this.displayName,
+    List<Resource> dependencies = const [],
+  }) : super(id: id);
+}
+```
+
+Both approaches are automatically detected by the planner and executor, so no additional configuration is needed.
 
 ### How Data Sources Work
 
@@ -613,7 +646,7 @@ Future<ResourceState> readResource(Resource resource) async {
 }
 ```
 
-Note: Providers do **not** need to handle `createResource`, `updateResource`, or `deleteResource` for read-only resources, as the planner and executor guarantee these methods will never be called for `ReadOnlyResource` instances.
+Note: Providers do **not** need to handle `createResource`, `updateResource`, or `deleteResource` for read-only resources, as the planner and executor guarantee these methods will never be called for resources with the `ReadOnly` mixin or `ReadOnlyResource` instances.
 
 ## Best Practices
 
@@ -625,5 +658,5 @@ Note: Providers do **not** need to handle `createResource`, `updateResource`, or
 6. **Serialization**: Ensure proper JSON serialization/deserialization
 7. **Dependencies**: Make dependencies explicit and clear
 8. **Flutter-style**: Follow Flutter widget patterns for familiarity
-9. **Data Sources**: Extend `ReadOnlyResource` for read-only external resources instead of `Resource`
+9. **Data Sources**: Use `ReadOnlyResource` or the `ReadOnly` mixin for read-only external resources
 

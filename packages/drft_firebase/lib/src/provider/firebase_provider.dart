@@ -5,9 +5,19 @@ import 'package:drft/drft.dart';
 import 'package:firebase_management/firebase_management.dart';
 import '../resources/firebase_app.dart';
 import '../resources/firebase_project.dart';
+import '../resources/firebase_resource.dart';
 
 /// Firebase Provider for managing Firebase projects and apps
-class FirebaseProvider extends Provider {
+///
+/// This provider uses the typed provider pattern with [FirebaseResource] as the
+/// base type, allowing it to handle both [FirebaseApp] and [FirebaseProject]
+/// resources with type safety.
+///
+/// The [canHandle] method is automatically implemented to check if a resource
+/// is a [FirebaseResource]. Methods receive [FirebaseResource] directly, so
+/// type checking is only needed to determine the specific resource type
+/// (FirebaseApp vs FirebaseProject).
+class FirebaseProvider extends Provider<FirebaseResource> {
   FirebaseManagement? _firebaseManagement;
   Credential? _credentials;
 
@@ -51,15 +61,15 @@ class FirebaseProvider extends Provider {
     _firebaseManagement = null;
   }
 
-  @override
-  bool canHandle(Resource resource) {
-    return resource is FirebaseProject || resource is FirebaseApp;
-  }
+  // canHandle() is automatically implemented by Provider<FirebaseResource>
+  // It checks if resource is FirebaseResource, which both FirebaseApp and
+  // FirebaseProject extend
 
   @override
-  Future<ResourceState> createResource(Resource resource) async {
+  Future<ResourceState> createResource(FirebaseResource resource) async {
     await _ensureInitialized();
 
+    // Type checking still needed to determine which specific resource type
     if (resource is FirebaseProject) {
       return await _createFirebaseProject(resource);
     } else if (resource is FirebaseApp) {
@@ -72,9 +82,10 @@ class FirebaseProvider extends Provider {
   }
 
   @override
-  Future<ResourceState> readResource(Resource resource) async {
+  Future<ResourceState> readResource(FirebaseResource resource) async {
     await _ensureInitialized();
 
+    // Type checking still needed to determine which specific resource type
     if (resource is FirebaseProject) {
       return await _readFirebaseProject(resource);
     } else if (resource is FirebaseApp) {
@@ -89,10 +100,11 @@ class FirebaseProvider extends Provider {
   @override
   Future<ResourceState> updateResource(
     ResourceState current,
-    Resource desired,
+    FirebaseResource desired,
   ) async {
     await _ensureInitialized();
 
+    // Type checking still needed to determine which specific resource type
     if (desired is FirebaseProject) {
       return await _updateFirebaseProject(current, desired);
     } else if (desired is FirebaseApp) {
