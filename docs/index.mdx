@@ -1,0 +1,135 @@
+---
+title: DRFT - Dart Resource Framework Toolkit
+description: Infrastructure-as-code toolkit for Dart. Declare, plan, and manage your infrastructure using type-safe Dart code.
+---
+
+# DRFT
+
+**DRFT** (pronounced "drift") is an infrastructure-as-code toolkit written in Dart. It allows you to describe your infrastructure declaratively using Dart code, leveraging Dart's expressive syntax and type system.
+
+## What is DRFT?
+
+DRFT enables you to:
+
+- **Declare infrastructure** using clean, type-safe Dart code
+- **Compare states** between desired and actual infrastructure
+- **Plan changes** before applying them
+- **Execute changes** to bring infrastructure to the desired state
+- **Manage state** to track infrastructure resources
+
+## Quick Start
+
+### Installation
+
+Add DRFT to your `pubspec.yaml`:
+
+```yaml
+dependencies:
+  drft: ^0.1.0
+```
+
+### Basic Example
+
+```dart
+import 'package:drft/drft.dart';
+
+void main() async {
+  final stack = DrftStack(
+    name: 'my-infrastructure',
+    providers: [
+      MockProvider(), // For testing
+    ],
+    resources: [
+      // Your resources here
+    ],
+  );
+
+  // Plan changes
+  final plan = await stack.plan();
+  print(plan.summary);
+
+  // Apply changes
+  final result = await stack.apply(plan);
+  print(result.summary);
+}
+```
+
+## Key Features
+
+- **Type Safety**: Leverage Dart's strong typing for infrastructure definitions
+- **Immutable Resources**: Flutter-style immutable resources with final properties
+- **Clean Syntax**: Familiar Dart constructor syntax, just like Flutter widgets
+- **State Management**: Automatic state tracking and comparison
+- **Dependency Resolution**: Automatic handling of resource dependencies
+- **Plan Before Apply**: Always see what will change before making changes
+- **Extensible**: Easy to add new providers and resources
+- **Idempotent**: Running the same configuration multiple times is safe
+
+## Documentation
+
+### Getting Started
+
+- [Getting Started Guide](/getting-started) - Set up DRFT in your project
+- [Examples](/examples) - Real-world examples and use cases
+
+### Core Concepts
+
+- [Core Concepts](/concepts) - Understanding DRFT fundamentals
+- [Architecture](/architecture) - System design and components
+- [Resources](/resources) - Understanding resources
+- [Providers](/providers) - Working with providers
+- [State Management](/resource-state-provider-relationship) - How state works
+
+### Guides
+
+- [Dependent Resources](/dependent-resources) - Managing resource dependencies
+- [Creating Providers](/providers) - Building custom providers
+- [Creating Resources](/resources) - Defining custom resources
+
+### Provider Guides
+
+- [Firebase Provider](/firebase-provider) - Configure Firebase resources
+- [App Store Provider](/appstore-provider) - Manage App Store Connect resources
+
+## Project Status
+
+✅ **Phase 1 Complete** - Core framework is implemented and functional. Currently working on provider implementations.
+
+## Why DRFT?
+
+### For Dart/Flutter Developers
+
+If you're already working with Dart and Flutter, DRFT feels natural. The syntax is familiar, the type system is the same, and you can leverage your existing Dart knowledge.
+
+### Type Safety
+
+Unlike configuration-based tools, DRFT provides compile-time type checking. Catch errors before they reach production.
+
+### Clean Syntax
+
+Define infrastructure the same way you define Flutter widgets - with clean, declarative constructors.
+
+```dart
+final stack = DrftStack(
+  name: 'production',
+  providers: [AwsProvider(region: 'us-east-1')],
+  resources: [
+    VirtualMachine(
+      name: 'web-server',
+      image: 'ubuntu-22.04',
+      size: 'medium',
+    ),
+  ],
+);
+```
+
+## Community
+
+- [GitHub Repository](https://github.com/appsup-dart/drft)
+- [Issue Tracker](https://github.com/appsup-dart/drft/issues)
+- [Discussions](https://github.com/appsup-dart/drft/discussions)
+
+## License
+
+[To be determined]
+

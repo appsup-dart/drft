@@ -1,0 +1,529 @@
+# Resource Development Guide
+
+Resources are the building blocks of infrastructure in DRFT. This guide explains how to create and use resources.
+
+## Resource Types
+
+### Base Resource
+
+All resources extend the `Resource` base class:
+
+```dart
+abstract class Resource {
+  final String id;
+  final String type;
+  final Map<String, dynamic> properties;
+  final List<String> dependencies;
+  
+  Resource({
+    required this.id,
+    required this.type,
+    required this.properties,
+    this.dependencies = const [],
+  });
+  
+  void validate();
+  Map<String, dynamic> toJson();
+}
+```
+
+### Concrete Resources
+
+Resources should be concrete classes with typed properties:
+
+```dart
+class VirtualMachine extends Resource {
+  final String name;
+  final String image;
+  final String size;
+  final String? subnetId;
+  final List<String>? securityGroupIds;
+  final Map<String, String>? tags;
+  
+  VirtualMachine({
+    required this.name,
+    required this.image,
+    required this.size,
+    this.subnetId,
+    this.securityGroupIds,
+    this.tags,
+  }) : super(
+    id: 'vm.$name',
+    type: 'aws.ec2.instance',
+    properties: {
+      'name': name,
+      'image': image,
+      'size': size,
+      'subnetId': subnetId,
+      'securityGroupIds': securityGroupIds,
+      'tags': tags,
+    },
+  );
+  
+  @override
+  void validate() {
+    if (name.isEmpty) {
+      throw ValidationException('VM name cannot be empty');
+    }
+    if (!['small', 'medium', 'large'].contains(size)) {
+      throw ValidationException('Invalid VM size: $size');
+    }
+  }
+}
+```
+
+## Using Dart Syntax Features
+
+### Immutable Resources with Constructor Parameters
+
+Resources use final properties set via constructor parameters, similar to Flutter widgets:
+
+```dart
+final vm = VirtualMachine(
+  name: 'web-server',
+  image: 'ubuntu-22.04',
+  size: 'medium',
+  subnetId: subnet.id,
+  securityGroupIds: [sg1.id, sg2.id],
+  tags: {
+    'Environment': 'production',
+    'Role': 'web-server',
+  },
+);
+```
+
+### Complex Resources
+
+For resources with many optional parameters, use named parameters with sensible defaults:
+
+```dart
+final database = Database(
+  name: 'app-db',
+  engine: 'postgresql',
+  version: '14',
+  instanceClass: 'db.t3.medium',
+  storage: 100,
+  backupRetention: 7,
+  multiAz: true,
+  publiclyAccessible: false,
+  subnetGroup: dbSubnetGroup.id,
+  securityGroups: [dbSecurityGroup.id],
+  tags: {
+    'Environment': 'production',
+    'Backup': 'enabled',
+  },
+);
+```
+
+### Named Constructors for Common Patterns
+
+```dart
+class VirtualMachine extends Resource {
+  // Standard constructor
+  VirtualMachine({/* ... */});
+  
+  // Named constructor for common configurations
+  VirtualMachine.production({
+    required String name,
+    required String image,
+  }) : this(
+    name: name,
+    image: image,
+    size: 'large',
+    tags: {'Environment': 'production'},
+  );
+  
+  VirtualMachine.development({
+    required String name,
+    required String image,
+  }) : this(
+    name: name,
+    image: image,
+    size: 'small',
+    tags: {'Environment': 'development'},
+  );
+}
+```
+
+## Resource Dependencies
+
+### Explicit Dependencies
+
+```dart
+final network = Network(name: 'main-network');
+final subnet = Subnet(
+  name: 'public-subnet',
+  networkId: network.id,
+  cidr: '10.0.1.0/24',
+  dependsOn: [network.id], // Explicit dependency (if needed)
+);
+```
+
+### Implicit Dependencies
+
+DRFT automatically detects dependencies when resources reference each other:
+
+```dart
+final network = Network(name: 'main-network');
+final subnet = Subnet(
+  name: 'public-subnet',
+  networkId: network.id, // Implicit dependency detected
+);
+```
+
+### Dependency Resolution
+
+```dart
+class Resource {
+  List<String> get implicitDependencies {
+    final deps = <String>[];
+    
+    // Scan properties for resource references
+    for (final value in properties.values) {
+      if (value is ResourceReference) {
+        deps.add(value.resourceId);
+      } else if (value is List) {
+        for (final item in value) {
+          if (item is ResourceReference) {
+            deps.add(item.resourceId);
+          }
+        }
+      }
+    }
+    
+    return deps;
+  }
+  
+  List<String> get allDependencies {
+    return [...dependencies, ...implicitDependencies];
+  }
+}
+```
+
+## Common Resource Patterns
+
+### Compute Resources
+
+```dart
+class VirtualMachine extends Resource {
+  final String name;
+  final String image;
+  final String size;
+  final String? subnetId;
+  final List<String>? securityGroupIds;
+  final String? userData;
+  final Map<String, String>? tags;
+  
+  VirtualMachine({
+    required this.name,
+    required this.image,
+    required this.size,
+    this.subnetId,
+    this.securityGroupIds,
+    this.userData,
+    this.tags,
+  }) : super(/* ... */);
+}
+
+class Container extends Resource {
+  final String name;
+  final String image;
+  final int? replicas;
+  final Map<String, String>? environment;
+  final List<Port>? ports;
+  
+  Container({
+    required this.name,
+    required this.image,
+    this.replicas,
+    this.environment,
+    this.ports,
+  }) : super(/* ... */);
+}
+```
+
+### Storage Resources
+
+```dart
+class Database extends Resource {
+  final String name;
+  final String engine;
+  final String version;
+  final String instanceClass;
+  final int storage;
+  final int? backupRetention;
+  final bool multiAz;
+  final String? subnetGroup;
+  final List<String>? securityGroups;
+  
+  Database({
+    required this.name,
+    required this.engine,
+    required this.version,
+    required this.instanceClass,
+    required this.storage,
+    this.backupRetention,
+    this.multiAz = false,
+    this.subnetGroup,
+    this.securityGroups,
+  }) : super(/* ... */);
+}
+
+class ObjectStorage extends Resource {
+  final String name;
+  final String? region;
+  final bool? versioning;
+  final String? encryption;
+  
+  ObjectStorage({
+    required this.name,
+    this.region,
+    this.versioning,
+    this.encryption,
+  }) : super(/* ... */);
+}
+```
+
+### Network Resources
+
+```dart
+class Network extends Resource {
+  final String name;
+  final String cidr;
+  final Map<String, String>? tags;
+  
+  Network({
+    required this.name,
+    required this.cidr,
+    this.tags,
+  }) : super(/* ... */);
+}
+
+class Subnet extends Resource {
+  final String name;
+  final String networkId;
+  final String cidr;
+  final String? availabilityZone;
+  
+  Subnet({
+    required this.name,
+    required this.networkId,
+    required this.cidr,
+    this.availabilityZone,
+  }) : super(/* ... */);
+}
+
+class SecurityGroup extends Resource {
+  final String name;
+  final String networkId;
+  final List<IngressRule>? ingressRules;
+  final List<EgressRule>? egressRules;
+  
+  SecurityGroup({
+    required this.name,
+    required this.networkId,
+    this.ingressRules,
+    this.egressRules,
+  }) : super(/* ... */);
+}
+```
+
+## Resource Validation
+
+Resources should validate their properties:
+
+```dart
+class VirtualMachine extends Resource {
+  @override
+  void validate() {
+    if (name.isEmpty) {
+      throw ValidationException('VM name cannot be empty');
+    }
+    
+    if (!RegExp(r'^[a-z0-9-]+$').hasMatch(name)) {
+      throw ValidationException(
+        'VM name must contain only lowercase letters, numbers, and hyphens',
+      );
+    }
+    
+    if (!['small', 'medium', 'large', 'xlarge'].contains(size)) {
+      throw ValidationException('Invalid VM size: $size');
+    }
+    
+    if (subnetId != null && !subnetId!.startsWith('subnet.')) {
+      throw ValidationException('Invalid subnet ID format');
+    }
+  }
+}
+```
+
+## Resource Serialization
+
+Resources must be serializable for state management:
+
+```dart
+class VirtualMachine extends Resource {
+  @override
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'type': type,
+      'properties': {
+        'name': name,
+        'image': image,
+        'size': size,
+        'subnetId': subnetId,
+        'securityGroupIds': securityGroupIds,
+        'tags': tags,
+      },
+      'dependencies': dependencies,
+    };
+  }
+  
+  factory VirtualMachine.fromJson(Map<String, dynamic> json) {
+    final props = json['properties'] as Map<String, dynamic>;
+    return VirtualMachine(
+      name: props['name'] as String,
+      image: props['image'] as String,
+      size: props['size'] as String,
+      subnetId: props['subnetId'] as String?,
+      securityGroupIds: (props['securityGroupIds'] as List?)?.cast<String>(),
+      tags: (props['tags'] as Map?)?.cast<String, String>(),
+    );
+  }
+}
+```
+
+## Resource References
+
+Use resource references to link resources:
+
+```dart
+class ResourceReference {
+  final String resourceId;
+  final String? attribute;
+  
+  ResourceReference(this.resourceId, [this.attribute]);
+  
+  String get value {
+    // Resolve reference at runtime
+    return _resolveReference();
+  }
+}
+
+// Usage
+final network = Network(name: 'main-network');
+final subnet = Subnet(
+  name: 'public-subnet',
+  networkId: network.id, // Direct reference
+);
+```
+
+## Example: Complete Infrastructure
+
+```dart
+void main() {
+  final stack = DrftStack(
+    name: 'web-application',
+    providers: [
+      AwsProvider(region: 'us-east-1'),
+    ],
+    resources: [
+      // Network
+      Vpc(
+        name: 'main-vpc',
+        cidr: '10.0.0.0/16',
+        tags: {'Environment': 'production'},
+      ),
+      
+      // Subnets
+      Subnet(
+        name: 'public-1',
+        vpcId: vpc.id,
+        cidr: '10.0.1.0/24',
+        availabilityZone: 'us-east-1a',
+      ),
+      Subnet(
+        name: 'public-2',
+        vpcId: vpc.id,
+        cidr: '10.0.2.0/24',
+        availabilityZone: 'us-east-1b',
+      ),
+      
+      // Security Groups
+      SecurityGroup(
+        name: 'web-sg',
+        vpcId: vpc.id,
+        ingressRules: [
+          IngressRule(port: 80, protocol: 'tcp', source: '0.0.0.0/0'),
+          IngressRule(port: 443, protocol: 'tcp', source: '0.0.0.0/0'),
+        ],
+      ),
+      
+      SecurityGroup(
+        name: 'db-sg',
+        vpcId: vpc.id,
+        ingressRules: [
+          IngressRule(port: 5432, protocol: 'tcp', source: '10.0.0.0/16'),
+        ],
+      ),
+      
+      // Load Balancer
+      LoadBalancer(
+        name: 'web-lb',
+        subnets: [subnet1.id, subnet2.id],
+        securityGroups: [webSg.id],
+        listeners: [
+          Listener(port: 80, protocol: 'http'),
+          Listener(port: 443, protocol: 'https'),
+        ],
+      ),
+      
+      // Virtual Machines
+      VirtualMachine(
+        name: 'web-1',
+        image: 'ubuntu-22.04',
+        size: 'medium',
+        subnetId: subnet1.id,
+        securityGroupIds: [webSg.id],
+        tags: {'Role': 'web-server'},
+      ),
+      
+      VirtualMachine(
+        name: 'web-2',
+        image: 'ubuntu-22.04',
+        size: 'medium',
+        subnetId: subnet2.id,
+        securityGroupIds: [webSg.id],
+        tags: {'Role': 'web-server'},
+      ),
+      
+      // Database
+      Database(
+        name: 'app-db',
+        engine: 'postgresql',
+        version: '14',
+        instanceClass: 'db.t3.medium',
+        storage: 100,
+        backupRetention: 7,
+        multiAz: true,
+        subnetGroup: dbSubnetGroup.id,
+        securityGroups: [dbSg.id],
+        tags: {'Environment': 'production'},
+      ),
+    ],
+  );
+}
+```
+
+## Best Practices
+
+1. **Immutability**: Resources should be immutable with final properties
+2. **Type Safety**: Use strong typing for all properties
+3. **Validation**: Validate all inputs in the `validate()` method
+4. **Defaults**: Provide sensible defaults where appropriate
+5. **Documentation**: Document all properties and their purposes
+6. **Serialization**: Ensure proper JSON serialization/deserialization
+7. **Dependencies**: Make dependencies explicit and clear
+8. **Flutter-style**: Follow Flutter widget patterns for familiarity
+

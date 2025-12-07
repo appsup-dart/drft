@@ -1,0 +1,152 @@
+---
+title: Getting Started
+description: Get up and running with DRFT in minutes
+---
+
+# Getting Started
+
+This guide will help you get started with DRFT and create your first infrastructure stack.
+
+## Installation
+
+### Prerequisites
+
+- Dart SDK 3.0 or higher
+- A Dart project (or create a new one)
+
+### Add DRFT to Your Project
+
+Add DRFT to your `pubspec.yaml`:
+
+```yaml
+dependencies:
+  drft: ^0.1.0
+```
+
+Then install dependencies:
+
+```bash
+dart pub get
+```
+
+## Your First Stack
+
+Let's create a simple stack with a mock resource to get familiar with DRFT.
+
+### 1. Create a Stack
+
+```dart
+import 'package:drft/drft.dart';
+
+void main() async {
+  final stack = DrftStack(
+    name: 'my-first-stack',
+    providers: [
+      MockProvider(), // For testing
+    ],
+    resources: [
+      // We'll add resources here
+    ],
+  );
+}
+```
+
+### 2. Define a Resource
+
+For now, let's use a simple test resource. In a real scenario, you'd use resources from providers like Firebase, AWS, etc.
+
+```dart
+final stack = DrftStack(
+  name: 'my-first-stack',
+  providers: [MockProvider()],
+  resources: [
+    TestResource(
+      id: 'my-resource',
+      name: 'Hello DRFT',
+    ),
+  ],
+);
+```
+
+### 3. Plan Changes
+
+Before applying changes, always plan first to see what will happen:
+
+```dart
+final plan = await stack.plan();
+print(plan.summary);
+```
+
+This will show you what operations DRFT will perform (create, update, or delete).
+
+### 4. Apply Changes
+
+Once you're happy with the plan, apply it:
+
+```dart
+final result = await stack.apply(plan);
+print(result.summary);
+```
+
+## Understanding the Workflow
+
+DRFT follows a simple workflow:
+
+1. **Define** your desired infrastructure in code
+2. **Plan** to see what changes will be made
+3. **Apply** to execute the changes
+4. **State** is automatically tracked
+
+## Next Steps
+
+- Check out [Examples](/examples) for more complex scenarios
+- Learn about [Resources](/resources) and [Providers](/providers)
+- Read the [Architecture](/architecture) guide to understand how DRFT works
+
+## Common Tasks
+
+### View Current State
+
+```dart
+final state = await stack.stateManager.load();
+print('Current resources: ${state.resources.length}');
+```
+
+### Refresh State
+
+Refresh state from actual infrastructure:
+
+```dart
+final state = await stack.refresh();
+```
+
+### Destroy Resources
+
+To remove all resources:
+
+```dart
+final plan = await stack.plan();
+// Filter for delete operations if needed
+await stack.apply(plan);
+```
+
+## Troubleshooting
+
+### State File Not Found
+
+If you see errors about state files, DRFT will create them automatically. Make sure you have write permissions in your project directory.
+
+### Provider Not Found
+
+Ensure you've added the correct provider to your stack and that it's properly configured.
+
+### Resources Not Updating
+
+Check that your resource definitions match the actual infrastructure. Use `refresh()` to sync state.
+
+## Getting Help
+
+- Check the [Examples](/examples) for common patterns
+- Review the [Architecture](/architecture) documentation
+- Open an issue on [GitHub](https://github.com/appsup-dart/drft)
+

@@ -1,0 +1,553 @@
+# DRFT Examples
+
+This document contains practical examples of using DRFT to define infrastructure.
+
+## Basic Example: Single VM
+
+```dart
+import 'package:drft/drft.dart';
+
+void main() async {
+  final stack = DrftStack(
+    name: 'simple-vm',
+    providers: [
+      AwsProvider(region: 'us-east-1'),
+    ],
+    resources: [
+      VirtualMachine(
+        name: 'my-server',
+        image: 'ubuntu-22.04',
+        size: 'medium',
+      ),
+    ],
+  );
+  
+  // Plan changes
+  final plan = await stack.plan();
+  print(plan);
+  
+  // Apply changes
+  await stack.apply(plan);
+}
+```
+
+## Web Application Stack
+
+```dart
+import 'package:drft/drft.dart';
+
+void main() async {
+  final stack = DrftStack(
+    name: 'web-app',
+    providers: [
+      AwsProvider(region: 'us-east-1'),
+    ],
+    resources: [
+      // Network Infrastructure
+      Vpc(
+        name: 'main-vpc',
+        cidr: '10.0.0.0/16',
+        tags: {'Name': 'main-vpc', 'Environment': 'production'},
+      ),
+      
+      Subnet(
+        name: 'public-subnet-1a',
+        vpcId: vpc.id,
+        cidr: '10.0.1.0/24',
+        availabilityZone: 'us-east-1a',
+      ),
+      
+      Subnet(
+        name: 'public-subnet-1b',
+        vpcId: vpc.id,
+        cidr: '10.0.2.0/24',
+        availabilityZone: 'us-east-1b',
+      ),
+      
+      Subnet(
+        name: 'private-subnet-1a',
+        vpcId: vpc.id,
+        cidr: '10.0.10.0/24',
+        availabilityZone: 'us-east-1a',
+      ),
+      
+      Subnet(
+        name: 'private-subnet-1b',
+        vpcId: vpc.id,
+        cidr: '10.0.11.0/24',
+        availabilityZone: 'us-east-1b',
+      ),
+      
+      // Internet Gateway
+      InternetGateway(
+        name: 'main-igw',
+        vpcId: vpc.id,
+      ),
+      
+      // Route Tables
+      RouteTable(
+        name: 'public-rt',
+        vpcId: vpc.id,
+        routes: [
+          Route(destination: '0.0.0.0/0', gatewayId: igw.id),
+        ],
+        subnets: [publicSubnet1a.id, publicSubnet1b.id],
+      ),
+      
+      // Security Groups
+      SecurityGroup(
+        name: 'web-sg',
+        vpcId: vpc.id,
+        description: 'Security group for web servers',
+        ingressRules: [
+          IngressRule(port: 80, protocol: 'tcp', source: '0.0.0.0/0'),
+          IngressRule(port: 443, protocol: 'tcp', source: '0.0.0.0/0'),
+          IngressRule(port: 22, protocol: 'tcp', source: '10.0.0.0/16'),
+        ],
+        egressRules: [
+          EgressRule(port: 0, protocol: '-1', destination: '0.0.0.0/0'),
+        ],
+      ),
+      
+      SecurityGroup(
+        name: 'db-sg',
+        vpcId: vpc.id,
+        description: 'Security group for database',
+        ingressRules: [
+          IngressRule(port: 5432, protocol: 'tcp', source: '10.0.0.0/16'),
+        ],
+      ),
+      
+      // Application Load Balancer
+      LoadBalancer(
+        name: 'web-alb',
+        type: 'application',
+        subnets: [publicSubnet1a.id, publicSubnet1b.id],
+        securityGroups: [webSg.id],
+        listeners: [
+          Listener(
+            port: 80,
+            protocol: 'http',
+            defaultAction: RedirectAction(port: 443, protocol: 'https'),
+          ),
+          Listener(
+            port: 443,
+            protocol: 'https',
+            certificate: 'arn:aws:acm:us-east-1:123456789012:certificate/...',
+            defaultAction: ForwardAction(targetGroup: webTargetGroup.id),
+          ),
+        ],
+        tags: {'Name': 'web-alb'},
+      ),
+      
+      TargetGroup(
+        name: 'web-tg',
+        protocol: 'http',
+        port: 80,
+        vpcId: vpc.id,
+        healthCheck: HealthCheck(
+          path: '/health',
+          interval: 30,
+          timeout: 5,
+          healthyThreshold: 2,
+          unhealthyThreshold: 3,
+        ),
+      ),
+      
+      // Auto Scaling Group
+      AutoScalingGroup(
+        name: 'web-asg',
+        minSize: 2,
+        maxSize: 10,
+        desiredCapacity: 2,
+        subnets: [privateSubnet1a.id, privateSubnet1b.id],
+        securityGroups: [webSg.id],
+        launchTemplate: LaunchTemplate(
+          imageId: 'ami-0c55b159cbfafe1f0',
+          instanceType: 't3.medium',
+          userData: '''
+            #!/bin/bash
+            apt-get update
+            apt-get install -y nginx
+            systemctl start nginx
+            systemctl enable nginx
+          ''',
+        ),
+        targetGroups: [webTargetGroup.id],
+        tags: {'Name': 'web-server'},
+      ),
+      
+      // RDS Database
+      DatabaseSubnetGroup(
+        name: 'db-subnet-group',
+        subnets: [privateSubnet1a.id, privateSubnet1b.id],
+        description: 'Subnet group for RDS database',
+      ),
+      
+      Database(
+        name: 'app-db',
+        engine: 'postgresql',
+        version: '14',
+        instanceClass: 'db.t3.medium',
+        allocatedStorage: 100,
+        storageType: 'gp3',
+        backupRetentionPeriod: 7,
+        multiAz: true,
+        publiclyAccessible: false,
+        subnetGroup: dbSubnetGroup.id,
+        securityGroups: [dbSg.id],
+        masterUsername: 'admin',
+        masterPassword: Secret.fromEnvironment('DB_PASSWORD'),
+        tags: {'Name': 'app-db'},
+      ),
+    ],
+  );
+  
+  final plan = await stack.plan();
+  await stack.apply(plan);
+}
+```
+
+## Kubernetes Deployment
+
+```dart
+import 'package:drft/drft.dart';
+
+void main() async {
+  final stack = DrftStack(
+    name: 'k8s-app',
+    providers: [
+      KubernetesProvider(
+        kubeconfig: '~/.kube/config',
+        namespace: 'production',
+      ),
+    ],
+    resources: [
+      // Namespace
+      KubernetesNamespace(name: 'production'),
+      
+      // ConfigMap
+      KubernetesConfigMap(
+        name: 'app-config',
+        namespace: 'production',
+        data: {
+          'database_url': 'postgresql://db:5432/app',
+          'redis_url': 'redis://redis:6379',
+          'log_level': 'info',
+        },
+      ),
+      
+      // Secret
+      KubernetesSecret(
+        name: 'app-secrets',
+        namespace: 'production',
+        type: 'Opaque',
+        data: {
+          'api_key': Secret.fromEnvironment('API_KEY'),
+          'db_password': Secret.fromEnvironment('DB_PASSWORD'),
+        },
+      ),
+      
+      // Deployment
+      KubernetesDeployment(
+        name: 'web-app',
+        namespace: 'production',
+        replicas: 3,
+        selector: {'app': 'web-app'},
+        template: PodTemplate(
+          labels: {'app': 'web-app'},
+          containers: [
+            Container(
+              name: 'web',
+              image: 'myregistry/web-app:latest',
+              ports: [ContainerPort(containerPort: 8080)],
+              env: [
+                EnvVar(name: 'DATABASE_URL', valueFrom: ConfigMapKeyRef('app-config', 'database_url')),
+                EnvVar(name: 'API_KEY', valueFrom: SecretKeyRef('app-secrets', 'api_key')),
+              ],
+              resources: ResourceRequirements(
+                requests: {'cpu': '100m', 'memory': '128Mi'},
+                limits: {'cpu': '500m', 'memory': '512Mi'},
+              ),
+            ),
+          ],
+        ),
+      ),
+      
+      // Service
+      KubernetesService(
+        name: 'web-service',
+        namespace: 'production',
+        type: 'LoadBalancer',
+        selector: {'app': 'web-app'},
+        ports: [
+          ServicePort(port: 80, targetPort: 8080, protocol: 'TCP'),
+        ],
+      ),
+      
+      // Ingress
+      KubernetesIngress(
+        name: 'web-ingress',
+        namespace: 'production',
+        rules: [
+          IngressRule(
+            host: 'example.com',
+            http: IngressHttp(
+              paths: [
+                IngressPath(
+                  path: '/',
+                  pathType: 'Prefix',
+                  backend: IngressBackend(
+                    serviceName: 'web-service',
+                    servicePort: 80,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+        tls: [
+          IngressTLS(
+            hosts: ['example.com'],
+            secretName: 'tls-secret',
+          ),
+        ],
+      ),
+    ],
+  );
+  
+  final plan = await stack.plan();
+  await stack.apply(plan);
+}
+```
+
+## Multi-Cloud Example
+
+```dart
+import 'package:drft/drft.dart';
+
+void main() async {
+  final stack = DrftStack(
+    name: 'multi-cloud',
+    providers: [
+      AwsProvider(region: 'us-east-1'),
+      GcpProvider(project: 'my-project', region: 'us-central1'),
+    ],
+    resources: [
+      // AWS Resources
+      AwsS3Bucket(
+        name: 'backup-bucket',
+        versioning: true,
+        encryption: 'AES256',
+        tags: {'Provider': 'AWS'},
+      ),
+      
+      // GCP Resources
+      GcpStorageBucket(
+        name: 'archive-bucket',
+        location: 'US',
+        storageClass: 'STANDARD',
+        versioning: true,
+        labels: {'provider': 'GCP'},
+      ),
+      
+      // Cross-cloud resource (DNS)
+      DnsRecord(
+        name: 'api.example.com',
+        type: 'A',
+        values: [
+          AwsLoadBalancer(name: 'aws-lb').dnsName,
+          GcpLoadBalancer(name: 'gcp-lb').dnsName,
+        ],
+        ttl: 300,
+      ),
+    ],
+  );
+  
+  final plan = await stack.plan();
+  await stack.apply(plan);
+}
+```
+
+## Using Variables and Functions
+
+```dart
+import 'package:drft/drft.dart';
+
+// Configuration
+const environment = 'production';
+const region = 'us-east-1';
+const instanceCount = 3;
+
+// Helper function
+List<Subnet> createSubnets(Vpc vpc, List<String> azs, String cidrBase) {
+  return azs.asMap().entries.map((entry) {
+    final index = entry.key;
+    final az = entry.value;
+    final subnetCidr = cidrBase.replaceRange(
+      cidrBase.lastIndexOf('.'),
+      cidrBase.length,
+      '${index + 1}.0/24',
+    );
+    
+    return Subnet(
+      name: 'subnet-$az',
+      vpcId: vpc.id,
+      cidr: subnetCidr,
+    )..availabilityZone = az;
+  }).toList();
+}
+
+void main() async {
+  final stack = DrftStack(
+    name: 'scalable-app',
+    providers: [
+      AwsProvider(region: region),
+    ],
+    resources: [
+      // Network
+      Vpc(
+        name: 'main-vpc',
+        cidr: '10.0.0.0/16',
+        tags: {'Environment': environment},
+      ),
+      
+      // Create subnets dynamically
+      ...createSubnets(
+        vpc,
+        ['us-east-1a', 'us-east-1b', 'us-east-1c'],
+        '10.0.0.0/16',
+      ),
+      
+      // Create multiple VMs
+      ...List.generate(instanceCount, (index) {
+        return VirtualMachine(
+          name: 'web-${index + 1}',
+          image: 'ubuntu-22.04',
+          size: 'medium',
+          subnetId: subnets[index % subnets.length].id,
+          tags: {
+            'Environment': environment,
+            'Index': '${index + 1}',
+          },
+        );
+      }),
+    ],
+  );
+  
+  final plan = await stack.plan();
+  await stack.apply(plan);
+}
+```
+
+## Conditional Resources
+
+```dart
+import 'package:drft/drft.dart';
+
+void main() async {
+  const enableMonitoring = true;
+  const enableBackup = true;
+  
+  final stack = DrftStack(
+    name: 'conditional-resources',
+    providers: [
+      AwsProvider(region: 'us-east-1'),
+    ],
+    resources: [
+      VirtualMachine(name: 'app-server', image: 'ubuntu-22.04', size: 'medium'),
+      
+      // Conditional monitoring
+      if (enableMonitoring) ...[
+        CloudWatchAlarm(
+          name: 'cpu-alarm',
+          metricName: 'CPUUtilization',
+          threshold: 80,
+          comparisonOperator: 'GreaterThanThreshold',
+          evaluationPeriods: 2,
+        ),
+        
+        SnsTopic(
+          name: 'alerts-topic',
+          subscriptions: [
+            SnsSubscription(
+              protocol: 'email',
+              endpoint: 'admin@example.com',
+            ),
+          ],
+        ),
+      ],
+      
+      // Conditional backup
+      if (enableBackup) ...[
+        BackupPlan(
+          name: 'daily-backup',
+          rules: [
+            BackupRule(
+              name: 'daily',
+              schedule: 'cron(0 2 * * ? *)', // 2 AM daily
+              targetBackupVault: backupVault.id,
+              lifecycle: BackupLifecycle(
+                deleteAfter: 30, // days
+                moveToColdStorageAfter: 7, // days
+              ),
+            ),
+          ],
+        ),
+      ],
+    ],
+  );
+  
+  final plan = await stack.plan();
+  await stack.apply(plan);
+}
+```
+
+## Using Modules/Reusable Components
+
+```dart
+import 'package:drft/drft.dart';
+
+// Reusable network module
+DrftStack createNetworkStack({
+  required String name,
+  required String cidr,
+  required List<String> availabilityZones,
+}) {
+  return DrftStack(
+    name: name,
+    providers: [AwsProvider(region: 'us-east-1')],
+    resources: [
+      Vpc(name: '$name-vpc', cidr: cidr),
+      ...availabilityZones.map((az) {
+        final index = availabilityZones.indexOf(az);
+        return Subnet(
+          name: '$name-subnet-$az',
+          vpcId: vpc.id,
+          cidr: _calculateSubnetCidr(cidr, index),
+          availabilityZone: az,
+        );
+      }),
+    ],
+  );
+}
+
+String _calculateSubnetCidr(String vpcCidr, int index) {
+  // Calculate subnet CIDR based on VPC CIDR and index
+  // Implementation details...
+  return '10.0.${index + 1}.0/24';
+}
+
+void main() async {
+  // Use the module
+  final networkStack = createNetworkStack(
+    name: 'production',
+    cidr: '10.0.0.0/16',
+    availabilityZones: ['us-east-1a', 'us-east-1b'],
+  );
+  
+  final plan = await networkStack.plan();
+  await networkStack.apply(plan);
+}
+```
+

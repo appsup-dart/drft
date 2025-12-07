@@ -1,0 +1,340 @@
+# Resource, ResourceState, and Provider Relationship
+
+This document explains the relationship between the three core concepts in DRFT: **Resource**, **ResourceState**, and **Provider**.
+
+## Overview
+
+These three concepts work together to manage infrastructure:
+
+- **Resource**: Represents the *desired* state of infrastructure (what you want)
+- **ResourceState**: Represents the *actual* state of infrastructure (what exists)
+- **Provider**: The bridge that translates between Resources and actual infrastructure
+
+```
+┌─────────────┐         ┌──────────────┐         ┌─────────────┐
+│  Resource   │─────────▶│   Provider   │─────────▶│ Infrastructure│
+│ (Desired)   │         │  (Translator) │         │  (Actual)   │
+└─────────────┘         └──────────────┘         └─────────────┘
+      │                         │                        │
+      │                         │                        │
+      └─────────────────────────┼────────────────────────┘
+                                 │
+                                 ▼
+                          ┌──────────────┐
+                          │ ResourceState │
+                          │   (Actual)   │
+                          └──────────────┘
+```
+
+## Resource
+
+A **Resource** is an immutable Dart class that represents the *desired* state of a piece of infrastructure. It defines:
+
+- **What** you want to create
+- **Properties** that describe the desired configuration
+- **Dependencies** on other resources
+
+### Characteristics
+
+- **Immutable**: Once created, a Resource cannot be modified
+- **Type-safe**: Uses Dart's type system for safety
+- **Declarative**: Describes *what* you want, not *how* to create it
+- **Generic over StateType**: `Resource<StateType>` allows type-safe access to state
+
+### Example
+
+```dart
+class Database extends Resource {
+  final String name;
+  final String engine;
+  final int? port;
+
+  const Database({
+    required String id,
+    required this.name,
+    required this.engine,
+    this.port,
+    List<Resource> dependencies = const [],
+  }) : super(
+          id: id,
+          dependencies: dependencies,
+        );
+}
+
+// Usage: Define what you want
+final database = Database(
+  id: 'db.main',
+  name: 'main_database',
+  engine: 'postgresql',
+  port: 5432,
+);
+```
+
+## ResourceState
+
+A **ResourceState** represents the *actual* state of infrastructure after it has been created or read from the provider. It contains:
+
+- **Read-only properties**: Values assigned by the provider (e.g., IDs, URLs)
+- **Current configuration**: The actual properties of the resource
+- **Metadata**: Additional information about the resource
+- **Reference to Resource**: The original Resource that created this state (optional)
+
+### Characteristics
+
+- **Immutable**: Once created, a ResourceState cannot be modified
+- **Provider-created**: Providers create ResourceState instances when resources are created/updated
+- **Typed subclasses**: Can extend ResourceState for type-safe property access
+- **Serializable**: Can be saved to and loaded from JSON
+
+### Example
+
+```dart
+// Typed ResourceState for type-safe access
+class DatabaseState extends ResourceState {
+  final String name;
+  final String engine;
+  final int? port;
+  final String connectionString; // Read-only property from provider
+
+  DatabaseState({
+    required super.resourceId,
+    required super.resourceType,
+    required this.name,
+    required this.engine,
+    this.port,
+    required this.connectionString, // Provider assigns this
+    super.metadata,
+    super.resource,
+  });
+}
+```
+
+## Provider
+
+A **Provider** is responsible for:
+
+1. **Translating** Resources into actual infrastructure
+2. **Creating** resources via API calls
+3. **Reading** current state from infrastructure
+4. **Updating** existing resources
+5. **Deleting** resources
+
+### Characteristics
+
+- **Platform-specific**: Each provider handles a specific platform (AWS, Firebase, etc.)
+- **State creator**: Creates ResourceState instances after operations
+- **Resource handler**: Determines which resources it can manage
+
+### Example
+
+```dart
+class DatabaseProvider extends Provider {
+  @override
+  Future<ResourceState> createResource(Resource resource) async {
+    final db = resource as Database;
+    
+    // Call actual API to create database
+    final apiResult = await api.createDatabase(
+      name: db.name,
+      engine: db.engine,
+      port: db.port,
+    );
+    
+    // Return ResourceState with read-only properties
+    return DatabaseState(
+      resourceId: db.id,
+      resourceType: 'Database',
+      name: db.name,
+      engine: db.engine,
+      port: db.port,
+      connectionString: apiResult.connectionString, // From API
+      resource: db,
+    );
+  }
+}
+```
+
+## The Relationship Flow
+
+### 1. Planning Phase
+
+```
+Resource (Desired)  →  Compare  →  ResourceState (Actual)
+     │                                    │
+     │                                    │
+     └────────────────────────────────────┘
+                    │
+                    ▼
+              Plan Operations
+```
+
+1. **Desired State**: Created from Resources in your Dart code
+2. **Actual State**: Loaded from state file (contains ResourceState instances)
+3. **Comparison**: Planner compares Resource properties with ResourceState properties
+4. **Plan**: Generates operations (create, update, delete)
+
+### 2. Execution Phase
+
+```
+Resource → Provider → Infrastructure → ResourceState
+   │         │             │                │
+   │         │             │                │
+   └─────────┴─────────────┴────────────────┘
+                    │
+                    ▼
+            Saved to State File
+```
+
+1. **Resource** is passed to **Provider**
+2. **Provider** calls actual infrastructure API
+3. Infrastructure is created/updated/deleted
+4. **Provider** creates **ResourceState** with actual values
+5. **ResourceState** is saved to state file
+
+### 3. State Persistence
+
+```
+ResourceState → JSON → State File → JSON → ResourceState
+```
+
+ResourceState instances are serialized to JSON and persisted in the state file. When loaded, they're deserialized back to ResourceState instances.
+
+## Key Concepts
+
+### Resource → ResourceState Transformation
+
+When a Provider creates a resource, it transforms a Resource (desired) into a ResourceState (actual):
+
+```dart
+// Input: Resource (what you want)
+final resource = Database(
+  id: 'db.main',
+  name: 'main_database',
+  engine: 'postgresql',
+);
+
+// Provider creates infrastructure and returns ResourceState
+final state = await provider.createResource(resource);
+
+// Output: ResourceState (what exists)
+// state.connectionString is now available (read-only from provider)
+```
+
+### Read-Only Properties
+
+Some properties only exist in ResourceState because they're assigned by the provider:
+
+```dart
+// Resource: You define what you can
+class AppStoreBundleId extends Resource<AppStoreBundleIdState> {
+  final String name;      // You define this
+  final String platform;  // You define this
+  // bundleId is NOT here - App Store assigns it!
+}
+
+// ResourceState: Provider adds read-only properties
+class AppStoreBundleIdState extends ResourceState {
+  final String name;      // From Resource
+  final String platform;  // From Resource
+  final String bundleId;  // Read-only: Assigned by App Store!
+}
+```
+
+### State Comparison
+
+The Planner compares Resources with ResourceStates:
+
+- **Only Resource properties** are compared (not read-only state properties)
+- If Resource properties match ResourceState properties → No change needed
+- If they differ → Update operation
+- If Resource exists but no ResourceState → Create operation
+- If ResourceState exists but no Resource → Delete operation
+
+```dart
+// Resource defines: name, engine, port
+final desired = Database(id: 'db.main', name: 'db', engine: 'postgresql', port: 5432);
+
+// ResourceState has: name, engine, port, connectionString
+final actual = DatabaseState(..., name: 'db', engine: 'mysql', port: 5432, ...);
+
+// Comparison: Only compares name, engine, port (not connectionString)
+// Result: engine differs → Update operation needed
+```
+
+## Lifecycle Example
+
+Here's a complete example showing the lifecycle:
+
+```dart
+// 1. Define desired state (Resource)
+final database = Database(
+  id: 'db.main',
+  name: 'main_database',
+  engine: 'postgresql',
+  port: 5432,
+);
+
+// 2. Create stack with provider
+final stack = DrftStack(
+  name: 'my-stack',
+  providers: [DatabaseProvider()],
+  resources: [database],
+);
+
+// 3. Plan: Compare Resource with actual ResourceState
+final plan = await stack.plan();
+// If database doesn't exist: Plan shows CREATE operation
+
+// 4. Apply: Provider creates infrastructure
+final result = await stack.apply(plan);
+// Provider.createResource(database) is called
+// → API call creates database
+// → Provider returns DatabaseState with connectionString
+
+// 5. State is saved
+// ResourceState is serialized and saved to .drft/state.json
+
+// 6. Next plan: ResourceState is loaded and compared
+final plan2 = await stack.plan();
+// Resource properties match ResourceState properties
+// → Plan shows no changes needed
+```
+
+## Type Safety
+
+Resources are generic over their StateType:
+
+```dart
+// Resource knows what StateType it produces
+class Database extends Resource<DatabaseState> {
+  // ...
+}
+
+// This enables type-safe access to state properties
+final state = await provider.createResource(database);
+// state is DatabaseState, so you can access:
+final connectionString = state.connectionString; // Type-safe!
+```
+
+## Summary
+
+| Concept | Represents | Created By | Contains |
+|---------|-----------|-----------|----------|
+| **Resource** | Desired state | Developer (Dart code) | Configuration properties |
+| **ResourceState** | Actual state | Provider (after API call) | Configuration + read-only properties |
+| **Provider** | Translation layer | Provider developer | Logic to manage infrastructure |
+
+**The Flow:**
+1. Developer defines **Resource** (desired state)
+2. Planner compares **Resource** with **ResourceState** (actual state)
+3. Executor passes **Resource** to **Provider**
+4. **Provider** creates/updates infrastructure
+5. **Provider** returns **ResourceState** (with actual values)
+6. **ResourceState** is saved to state file
+
+This separation allows DRFT to:
+- **Plan** changes before applying them
+- **Track** actual infrastructure state
+- **Compare** desired vs actual
+- **Support** multiple providers for different platforms
+

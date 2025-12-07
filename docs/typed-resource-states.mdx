@@ -1,0 +1,61 @@
+# Typed Resource States
+
+This document describes the plan for adding typed ResourceState support to DRFT.
+
+## Goal
+
+Make resources type-safe by having each Resource specify its own ResourceState type:
+
+```dart
+class ProvisioningProfileState extends ResourceState {
+  String get bundleId => getRequiredProperty<String>('bundleId');
+  String get type => getRequiredProperty<String>('type');
+  List<String> get certificates => 
+      (getProperty<List<dynamic>>('certificates') ?? [])
+          .map((e) => e as String)
+          .toList();
+}
+
+class ProvisioningProfile extends Resource<ProvisioningProfileState> {
+  final String bundleId;
+  final String type;
+  final List<String> certificates;
+
+  const ProvisioningProfile({
+    required super.id,
+    required this.bundleId,
+    required this.type,
+    this.certificates = const [],
+  });
+}
+```
+
+## Benefits
+
+1. **Type Safety**: Compile-time checking of property access
+2. **IDE Support**: Autocomplete for state properties
+3. **Documentation**: State properties are clearly defined
+4. **Refactoring**: Easier to refactor property names
+
+## Implementation Plan
+
+### Phase 1: Base Classes
+- [x] Make ResourceState a concrete class with helper methods
+- [x] Add `getProperty<T>()` and `getRequiredProperty<T>()` methods
+- [ ] Make Resource generic: `Resource<StateType extends ResourceState>`
+- [ ] Update Provider interface to work with generic resources
+
+### Phase 2: Example Implementation
+- [ ] Create ProvisioningProfileState with typed getters
+- [ ] Update ProvisioningProfile to use typed state
+- [ ] Update DependentResource to work with typed states
+
+### Phase 3: Full Migration
+- [ ] Update all example resources
+- [ ] Update all internal code
+- [ ] Update documentation
+
+## Current Status
+
+The base ResourceState class has been updated with helper methods, but the generic Resource type is causing compilation issues that need to be resolved.
+

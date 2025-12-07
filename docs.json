@@ -1,0 +1,96 @@
+{
+  "name": "DRFT",
+  "description": "Infrastructure-as-code toolkit for Dart. Declare, plan, and manage your infrastructure using type-safe Dart code.",
+  "github": "appsup-dart/drft",
+  "logo": "https://via.placeholder.com/200x50?text=DRFT",
+  "favicon": "https://via.placeholder.com/32x32?text=D",
+  "color": "#0175C2",
+  "sidebar": [
+    {
+      "group": "Getting Started",
+      "pages": [
+        {
+          "title": "Introduction",
+          "href": "/",
+          "icon": "rocket"
+        },
+        {
+          "title": "Getting Started",
+          "href": "/getting-started",
+          "icon": "play"
+        },
+        {
+          "title": "Next Steps",
+          "href": "/next-steps",
+          "icon": "arrow-right"
+        }
+      ]
+    },
+    {
+      "group": "Core Concepts",
+      "pages": [
+        {
+          "title": "Core Concepts",
+          "href": "/concepts"
+        },
+        {
+          "title": "Architecture",
+          "href": "/architecture"
+        },
+        {
+          "title": "State Management",
+          "href": "/resource-state-provider-relationship"
+        }
+      ]
+    },
+    {
+      "group": "Guides",
+      "pages": [
+        {
+          "title": "Resources",
+          "href": "/resources"
+        },
+        {
+          "title": "Providers",
+          "href": "/providers"
+        },
+        {
+          "title": "Dependent Resources",
+          "href": "/dependent-resources"
+        }
+      ]
+    },
+    {
+      "group": "Provider Guides",
+      "pages": [
+        {
+          "title": "Firebase Provider",
+          "href": "/firebase-provider"
+        },
+        {
+          "title": "App Store Provider",
+          "href": "/appstore-provider"
+        }
+      ]
+    },
+    {
+      "group": "Examples",
+      "pages": [
+        {
+          "title": "Examples",
+          "href": "/examples",
+          "icon": "code"
+        }
+      ]
+    },
+    {
+      "group": "Advanced",
+      "pages": [
+        {
+          "title": "Typed Resource States",
+          "href": "/typed-resource-states"
+        }
+      ]
+    }
+  ]
+}

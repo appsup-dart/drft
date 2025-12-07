@@ -1,0 +1,306 @@
+# App Store Connect Provider (`drft_appstore`)
+
+The App Store Connect provider enables DRFT to manage iOS app configuration, certificates, provisioning profiles, and App Store listings - essential for Flutter iOS app deployment.
+
+## Why App Store Connect Provider?
+
+- **iOS Flutter Apps**: Critical for deploying Flutter apps to iOS
+- **Complex Configuration**: Certificates, profiles, and app configuration are error-prone
+- **Terraform Gap**: Very limited App Store Connect support in Terraform
+- **Automation Value**: Saves significant developer time
+
+## Installation
+
+```yaml
+# pubspec.yaml
+dependencies:
+  drft: ^1.0.0
+  drft_appstore: ^1.0.0
+```
+
+## Configuration
+
+```dart
+import 'package:drft/drft.dart';
+import 'package:drft_appstore/drft_appstore.dart';
+
+final provider = AppStoreConnectProvider(
+  apiKey: AppStoreConnectApiKey(
+    keyId: 'ABC123XYZ',
+    issuerId: '12345678-1234-1234-1234-123456789012',
+    privateKey: 'path/to/AuthKey_ABC123XYZ.p8',
+  ),
+  // Or from environment
+  // apiKey: AppStoreConnectApiKey.fromEnvironment(),
+);
+```
+
+## Resources
+
+### Bundle ID
+
+```dart
+BundleId(
+  name: 'com.example.app',
+  identifier: 'com.example.app',
+  platform: 'IOS', // or 'MAC_OS', 'UNIVERSAL'
+)
+```
+
+### Certificate
+
+```dart
+DevelopmentCertificate(
+  name: 'dev-cert',
+  certificateType: 'IOS_DEVELOPMENT',
+  csrContent: csrContent, // Certificate Signing Request
+)
+
+DistributionCertificate(
+  name: 'dist-cert',
+  certificateType: 'IOS_DISTRIBUTION',
+  csrContent: csrContent,
+)
+```
+
+### Provisioning Profile
+
+```dart
+ProvisioningProfile(
+  name: 'dev-profile',
+  profileType: 'IOS_APP_DEVELOPMENT',
+  bundleId: bundleId.id,
+  certificates: [devCertificate.id],
+  devices: [device1.id, device2.id], // For development profiles
+)
+
+ProvisioningProfile(
+  name: 'dist-profile',
+  profileType: 'IOS_APP_STORE',
+  bundleId: bundleId.id,
+  certificates: [distCertificate.id],
+)
+```
+
+### App Store App
+
+```dart
+AppStoreApp(
+  name: 'My App',
+  bundleId: bundleId.id,
+  primaryLocale: 'en-US',
+  sku: 'MY_APP_SKU',
+)
+```
+
+### App Store Version
+
+```dart
+AppStoreVersion(
+  name: '1.0.0',
+  appId: app.id,
+  platform: 'IOS',
+  versionString: '1.0.0',
+  copyright: '2024 Example Inc.',
+  releaseType: 'MANUAL', // or 'AUTOMATIC', 'SCHEDULED'
+  earliestReleaseDate: DateTime(2024, 1, 15),
+)
+```
+
+### App Store Listing
+
+```dart
+AppStoreListing(
+  appId: app.id,
+  name: 'My Awesome App',
+  subtitle: 'The best app ever',
+  promotionalText: 'Download now!',
+  description: '''
+    This is a comprehensive description of my app.
+    It can span multiple lines and include details
+    about features and functionality.
+  ''',
+  keywords: ['app', 'flutter', 'awesome'],
+  supportUrl: 'https://example.com/support',
+  marketingUrl: 'https://example.com',
+  privacyPolicyUrl: 'https://example.com/privacy',
+  categoryIds: ['GAMES', 'ENTERTAINMENT'],
+)
+```
+
+### App Store Screenshots
+
+```dart
+AppStoreScreenshotSet(
+  appId: app.id,
+  screenshotDisplayType: 'IPHONE_65',
+  screenshots: [
+    AppStoreScreenshot(
+      filePath: 'screenshots/iphone_65_1.png',
+      fileName: 'screenshot_1.png',
+    ),
+    AppStoreScreenshot(
+      filePath: 'screenshots/iphone_65_2.png',
+      fileName: 'screenshot_2.png',
+    ),
+  ],
+)
+```
+
+### TestFlight Group
+
+```dart
+TestFlightGroup(
+  name: 'Internal Testers',
+  appId: app.id,
+  isInternalGroup: true,
+)
+
+TestFlightGroup(
+  name: 'Beta Testers',
+  appId: app.id,
+  isInternalGroup: false,
+)
+```
+
+## Complete Example
+
+```dart
+import 'package:drft/drft.dart';
+import 'package:drft_appstore/drft_appstore.dart';
+
+void main() async {
+  final stack = DrftStack(
+    name: 'ios-app-config',
+    providers: [
+      AppStoreConnectProvider(
+        apiKey: AppStoreConnectApiKey.fromEnvironment(),
+      ),
+    ],
+    resources: [
+      // Bundle ID
+      BundleId(
+        name: 'com.example.app',
+        identifier: 'com.example.app',
+        platform: 'IOS',
+      ),
+      
+      // Certificates
+      DevelopmentCertificate(
+        name: 'dev-cert',
+        certificateType: 'IOS_DEVELOPMENT',
+        csrContent: csrContent,
+      ),
+      
+      DistributionCertificate(
+        name: 'dist-cert',
+        certificateType: 'IOS_DISTRIBUTION',
+        csrContent: csrContent,
+      ),
+      
+      // Provisioning Profiles
+      ProvisioningProfile(
+        name: 'dev-profile',
+        profileType: 'IOS_APP_DEVELOPMENT',
+        bundleId: bundleId.id,
+        certificates: [devCertificate.id],
+        devices: [device1.id, device2.id],
+      ),
+      
+      ProvisioningProfile(
+        name: 'dist-profile',
+        profileType: 'IOS_APP_STORE',
+        bundleId: bundleId.id,
+        certificates: [distCertificate.id],
+      ),
+      
+      // App Store App
+      AppStoreApp(
+        name: 'My Flutter App',
+        bundleId: bundleId.id,
+        primaryLocale: 'en-US',
+        sku: 'MY_APP_SKU',
+      ),
+      
+      // App Store Version
+      AppStoreVersion(
+        name: '1.0.0',
+        appId: app.id,
+        platform: 'IOS',
+        versionString: '1.0.0',
+        copyright: '2024 Example Inc.',
+        releaseType: 'MANUAL',
+      ),
+      
+      // App Store Listing
+      AppStoreListing(
+        appId: app.id,
+        name: 'My Flutter App',
+        subtitle: 'Built with Flutter',
+        description: 'A beautiful Flutter app...',
+        keywords: ['flutter', 'dart', 'mobile'],
+        supportUrl: 'https://example.com/support',
+        privacyPolicyUrl: 'https://example.com/privacy',
+      ),
+      
+      // TestFlight Groups
+      TestFlightGroup(
+        name: 'Internal Testers',
+        appId: app.id,
+        isInternalGroup: true,
+      ),
+    ],
+  );
+  
+  final plan = await stack.plan();
+  await stack.apply(plan);
+}
+```
+
+## Implementation Notes
+
+### Authentication
+
+App Store Connect uses API keys:
+- Generate API key in App Store Connect
+- Download `.p8` private key file
+- Use key ID, issuer ID, and private key for authentication
+
+### API Limitations
+
+- App Store Connect API has rate limits
+- Some operations require manual approval
+- Certificates and profiles have expiration dates
+- Some resources cannot be deleted once created
+
+### State Management
+
+Resources are tracked by their App Store Connect IDs:
+- Bundle IDs: `bundleId/{id}`
+- Certificates: `certificate/{id}`
+- Provisioning Profiles: `profile/{id}`
+- Apps: `app/{id}`
+
+## Resources Roadmap
+
+### Phase 1 (Initial)
+- ✅ Bundle IDs
+- ✅ Certificates (Development, Distribution)
+- ✅ Provisioning Profiles
+- ✅ App Store Apps
+- ✅ App Store Versions
+
+### Phase 2
+- 🎯 App Store Listings
+- 🎯 App Store Screenshots
+- 🎯 App Store Previews
+- 🎯 TestFlight Groups
+- 🎯 TestFlight Testers
+
+### Phase 3
+- 🎯 In-App Purchases
+- 🎯 App Store Review Information
+- 🎯 App Store Pricing
+- 🎯 App Store Localizations
+- 🎯 App Store Connect Users
+

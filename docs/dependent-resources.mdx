@@ -1,0 +1,226 @@
+# Dependent Resources
+
+Dependent resources are resources that need properties from other resources that are only available after those resources are created.
+
+## Problem
+
+Some resources have read-only properties that are assigned by the provider after creation. For example:
+
+- **App Store Bundle ID**: You create it with a name, but App Store assigns an ID
+- **Provisioning Profile**: Needs the Bundle ID, which isn't available until the Bundle ID is created
+- **AWS Security Group Rule**: Needs the security group ID, which is assigned after creation
+
+## Solution: DependentResource
+
+`DependentResource` allows you to define a resource that is built **after** its dependencies are created, using a builder function that receives the states of the dependencies.
+
+## How It Works
+
+Similar to Terraform's handling of computed values:
+
+1. **Planning Phase**: 
+   - If dependencies exist in actual state, the planner tries to build the `DependentResource` for comparison
+   - If dependencies don't exist yet, the resource is marked for creation (will be built during execution)
+   - This may require multiple plan/apply cycles if dependencies are also being created
+
+2. **Execution Phase**: 
+   - Dependencies are created first (in topological order)
+   - When a `DependentResource` is encountered, the executor:
+     - Collects the states of all dependencies
+     - Calls the `build()` method with those states
+     - The builder function creates the actual resource
+     - The built resource is then created normally
+
+3. **State Management**: 
+   - The **built resource** is saved to state, not the `DependentResource` wrapper
+   - This is because the builder function cannot be serialized
+   - When loading state, you get the built resource (e.g., `ProvisioningProfile`), not the wrapper
+
+## Usage
+
+### Example: App Store Bundle ID and Provisioning Profile
+
+```dart
+// Step 1: Create the Bundle ID resource
+final bundleId = AppStoreBundleId(
+  id: 'bundle.myapp',
+  name: 'com.example.myapp',
+  platform: 'ios',
+);
+
+// Step 2: Create a DependentResource for the Provisioning Profile
+// The profile needs the Bundle ID that App Store assigns
+final provisioningProfile = DependentResource<ProvisioningProfile>(
+  id: 'profile.main',
+  dependencies: [bundleId],
+  builder: (Map<String, ResourceState> dependencyStates) {
+    // Get the Bundle ID state (created in previous step)
+    final bundleIdState = dependencyStates[bundleId.id]!;
+    
+    // Extract the read-only property (assigned by the provider)
+    // The MockProvider simulates App Store by adding 'bundleId' to properties
+    // In a real App Store provider, this would come from the actual API response
+    final bundleIdValue = bundleIdState.properties['bundleId'] as String? ??
+        bundleIdState.resourceId; // Fallback if not found
+    
+    // Build the actual ProvisioningProfile resource
+    return ProvisioningProfile(
+      id: 'profile.main',
+      bundleId: bundleIdValue,
+      type: 'development',
+      certificates: ['cert1', 'cert2'],
+    );
+  },
+);
+
+// Step 3: Add both to the stack
+final stack = DrftStack(
+  name: 'appstore-stack',
+  providers: [AppStoreProvider()],
+  resources: [bundleId, provisioningProfile],
+);
+```
+
+## Accessing Dependency Properties
+
+### Using `.single()` constructor (recommended for single dependencies):
+
+The builder function receives the `ResourceState` directly:
+
+```dart
+DependentResource<MyResource>.single(
+  id: 'resource.id',
+  dependency: myDependency,
+  builder: (dependencyState) {
+    // Direct access - no need to look up in a map!
+    final value = dependencyState.properties['propertyName'];
+    return MyResource(/* ... */);
+  },
+);
+```
+
+### Using `.pair()` constructor (for two dependencies):
+
+The builder function receives both dependency states directly:
+
+```dart
+DependentResource<MyResource>.pair(
+  id: 'resource.id',
+  dependency1: dep1,
+  dependency2: dep2,
+  builder: (state1, state2) {
+    final value1 = state1.properties['property1'];
+    final value2 = state2.properties['property2'];
+    return MyResource(/* ... */);
+  },
+);
+```
+
+### Using the standard constructor (for multiple dependencies):
+
+The builder function receives a `Map<String, ResourceState>` where:
+- **Key**: The resource ID of the dependency
+- **Value**: The `ResourceState` after the dependency was created
+
+```dart
+builder: (Map<String, ResourceState> dependencyStates) {
+  final depState = dependencyStates['dependency.id']!;
+  
+  // Access properties from the state
+  // Option 1: Direct access (if properties are at top level)
+  final value = depState.properties['propertyName'];
+  
+  // Option 2: Nested access (if using the nested structure)
+  final nestedProps = depState.properties['properties'] as Map<String, dynamic>?;
+  final value = nestedProps?['propertyName'];
+  
+  // Option 3: Access the resource object if available
+  final resource = depState.resource;
+  if (resource != null) {
+    // Use reflection or type casting to access properties
+  }
+  
+  return YourResource(/* ... */);
+}
+```
+
+## Serialization
+
+**Important**: The `DependentResource` wrapper cannot be serialized because it contains a builder function. Therefore:
+
+- **During execution**: The built resource is saved to state
+- **When loading state**: You get the built resource (e.g., `ProvisioningProfile`), not the `DependentResource` wrapper
+- **During planning**: If dependencies exist, the planner tries to rebuild the `DependentResource` for comparison
+
+This is similar to how Terraform handles computed values - the actual resource is stored, not the computation logic.
+
+## Multiple Plan/Apply Cycles
+
+Like Terraform, you may need multiple plan/apply cycles when:
+
+1. **First cycle**: Create resources with read-only properties (e.g., Bundle ID)
+2. **Second cycle**: Create resources that depend on those read-only properties (e.g., Provisioning Profile)
+
+However, DRFT tries to minimize this by:
+- Building `DependentResource` during planning if dependencies already exist
+- Ordering operations correctly so dependencies are created first
+
+## Type Safety
+
+`DependentResource<T>` is generic, so you get type safety:
+
+```dart
+DependentResource<ProvisioningProfile> profile = DependentResource(
+  id: 'profile.main',
+  dependencies: [bundleId],
+  builder: (states) => ProvisioningProfile(/* ... */),
+);
+
+// The built resource is typed
+ProvisioningProfile built = profile.built;  // Type-safe!
+```
+
+## Best Practices
+
+1. **Always declare dependencies**: Even though `DependentResource` has a builder, you should still declare dependencies explicitly for clarity and proper ordering.
+
+2. **Validate in builder**: Add validation in the builder function to ensure all required properties are present:
+
+```dart
+builder: (dependencyStates) {
+  final bundleIdState = dependencyStates[bundleId.id];
+  if (bundleIdState == null) {
+    throw StateError('Bundle ID state not found');
+  }
+  
+  final bundleIdValue = bundleIdState.properties['bundleId'] as String?;
+  if (bundleIdValue == null) {
+    throw StateError('Bundle ID not found in state');
+  }
+  
+  return ProvisioningProfile(/* ... */);
+}
+```
+
+3. **Use descriptive property paths**: Document how to access properties from dependency states, as the structure may vary.
+
+4. **Handle missing properties gracefully**: The builder should handle cases where expected properties might not be present.
+
+## Limitations
+
+- **No updates**: `DependentResource` is built once during creation. Updates would require rebuilding, which isn't currently supported.
+- **State structure**: You need to know the structure of `ResourceState.properties` to access read-only properties correctly.
+- **Type information**: The builder receives `ResourceState`, not the typed resource, so you may need to extract properties manually.
+- **Serialization**: The builder function cannot be serialized, so only the built resource is stored in state.
+
+## Comparison with Terraform
+
+Terraform handles this with:
+- **Computed values**: Unknown values during planning
+- **Multiple cycles**: Plan/apply cycles until all dependencies are resolved
+- **Data sources**: Look up values after creation
+
+DRFT's approach:
+- **DependentResource**: Explicit wrapper that builds resources after dependencies are created
+- **State storage**: Built resource is stored, not the wrapper
+- **Planning**: Tries to build if dependencies exist, otherwise marks for creation

@@ -1,0 +1,138 @@
+---
+title: Core Concepts
+description: Understanding the fundamental concepts of DRFT
+---
+
+# Core Concepts
+
+DRFT is built around a few key concepts that work together to manage your infrastructure.
+
+## Resources
+
+**Resources** are the building blocks of your infrastructure. They represent the things you want to manage - servers, databases, networks, etc.
+
+```dart
+final resource = VirtualMachine(
+  name: 'web-server',
+  image: 'ubuntu-22.04',
+  size: 'medium',
+);
+```
+
+Resources are:
+- **Immutable** - Once created, properties don't change
+- **Type-safe** - Dart's type system ensures correctness
+- **Declarative** - You describe what you want, not how to get it
+
+Learn more: [Resources Guide](/resources)
+
+## Providers
+
+**Providers** are the bridge between DRFT and the actual infrastructure platforms (AWS, Firebase, etc.). They handle the creation, reading, updating, and deletion of resources.
+
+```dart
+final provider = AwsProvider(
+  region: 'us-east-1',
+  credentials: awsCredentials,
+);
+```
+
+Each provider knows how to:
+- Create resources in its platform
+- Read current resource state
+- Update existing resources
+- Delete resources
+
+Learn more: [Providers Guide](/providers)
+
+## State
+
+**State** represents the current state of your infrastructure. DRFT tracks:
+- What resources exist
+- Their current properties
+- Their relationships
+
+State is stored locally (or remotely with a state backend) and is used to:
+- Compare desired vs actual infrastructure
+- Plan changes
+- Track what's been created
+
+Learn more: [State Management](/resource-state-provider-relationship)
+
+## Stacks
+
+A **Stack** is a collection of resources and providers that define a complete infrastructure configuration.
+
+```dart
+final stack = DrftStack(
+  name: 'production',
+  providers: [AwsProvider(region: 'us-east-1')],
+  resources: [
+    VirtualMachine(name: 'server-1'),
+    Database(name: 'main-db'),
+  ],
+);
+```
+
+Stacks provide:
+- Resource organization
+- Provider configuration
+- State management
+- Planning and execution
+
+## Planning
+
+**Planning** is the process of comparing desired infrastructure (your code) with actual infrastructure (what exists) to determine what changes need to be made.
+
+```dart
+final plan = await stack.plan();
+// Plan shows: create, update, or delete operations
+```
+
+A plan shows you:
+- What will be created
+- What will be updated
+- What will be deleted
+- What will remain unchanged
+
+## Execution
+
+**Execution** is applying the plan to actually make changes to your infrastructure.
+
+```dart
+final result = await stack.apply(plan);
+// Changes are now applied
+```
+
+Execution is:
+- **Safe** - You always plan first
+- **Idempotent** - Running twice has the same result
+- **Transactional** - Changes are atomic where possible
+
+## Dependencies
+
+Resources can depend on other resources. DRFT automatically:
+- Orders operations correctly
+- Ensures dependencies are created first
+- Handles deletion in reverse order
+
+```dart
+final vpc = Vpc(name: 'main-vpc');
+final subnet = Subnet(
+  name: 'main-subnet',
+  vpcId: vpc.id, // Dependency
+);
+```
+
+Learn more: [Dependent Resources](/dependent-resources)
+
+## How It All Works Together
+
+1. **You define** resources in a stack
+2. **DRFT plans** what needs to change
+3. **You review** the plan
+4. **DRFT executes** the changes
+5. **State is updated** automatically
+
+This cycle repeats as your infrastructure evolves.
+

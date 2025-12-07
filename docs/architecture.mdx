@@ -1,0 +1,263 @@
+# DRFT Architecture
+
+This document describes the high-level architecture of DRFT and how its components interact.
+
+## System Overview
+
+DRFT follows a modular architecture with clear separation of concerns:
+
+```
+┌─────────────────────────────────────────────────────────┐
+│                    DRFT Core                            │
+│  ┌──────────┐  ┌──────────┐  ┌──────────┐             │
+│  │  Parser  │  │  Planner │  │ Executor │             │
+│  └──────────┘  └──────────┘  └──────────┘             │
+│  ┌──────────┐  ┌──────────┐  ┌──────────┐             │
+│  │  State   │  │  Graph   │  │  Events  │             │
+│  │ Manager  │  │ Builder  │  │  System  │             │
+│  └──────────┘  └──────────┘  └──────────┘             │
+└─────────────────────────────────────────────────────────┘
+                        │
+                        │ Provider Interface
+                        │
+        ┌───────────────┼───────────────┐
+        │               │               │
+┌───────▼──────┐ ┌──────▼──────┐ ┌──────▼──────┐
+│ AWS Provider │ │ GCP Provider│ │ K8s Provider│
+└──────────────┘ └─────────────┘ └─────────────┘
+```
+
+## Core Components
+
+### 1. Stack
+
+A `Stack` is the top-level container that holds:
+- Provider configurations
+- Resource definitions
+- State management
+- Execution context
+
+```dart
+class DrftStack {
+  final String name;
+  final List<Provider> providers;
+  final List<Resource> resources;
+  final StateManager stateManager;
+  
+  Future<Plan> plan();
+  Future<ApplyResult> apply(Plan plan);
+  Future<State> refresh();
+}
+```
+
+### 2. Resources
+
+Resources are immutable Dart classes that represent the *desired* state of infrastructure components. Each resource:
+- Has a unique identifier
+- Has final properties that define its desired state
+- Can depend on other resources (as Resource references)
+- Is generic over a ResourceState type for type safety
+
+```dart
+abstract class Resource<StateType extends ResourceState> {
+  final String id;
+  final List<Resource> dependencies;
+  
+  const Resource({
+    required this.id,
+    this.dependencies = const [],
+  });
+}
+```
+
+**See also**: [Resource, ResourceState, and Provider Relationship](./resource-state-provider-relationship.md) for detailed explanation of how Resources relate to ResourceStates and Providers.
+
+### 3. Providers
+
+Providers are responsible for:
+- Translating Resource definitions to API calls
+- Managing the actual infrastructure
+- Creating ResourceState instances after operations
+- Reporting current state
+- Handling provider-specific logic
+
+```dart
+abstract class Provider {
+  String get name;
+  String get version;
+  
+  Future<ResourceState> createResource(Resource resource);
+  Future<ResourceState> readResource(String resourceId, String resourceType);
+  Future<ResourceState> updateResource(
+    ResourceState current,
+    Resource desired,
+  );
+  Future<void> deleteResource(ResourceState state);
+  
+  bool canHandle(Resource resource);
+}
+```
+
+**See also**: [Resource, ResourceState, and Provider Relationship](./resource-state-provider-relationship.md) for detailed explanation of how Providers transform Resources into ResourceStates.
+
+### 4. State Manager
+
+The state manager:
+- Persists infrastructure state to disk
+- Loads previous state
+- Compares desired vs actual state
+- Tracks resource metadata
+
+```dart
+class StateManager {
+  final String stateFilePath;
+  
+  Future<State> load();
+  Future<void> save(State state);
+  StateDiff diff(State desired, State actual);
+}
+```
+
+### 5. Planner
+
+The planner:
+- Compares desired state with actual state
+- Identifies changes (create, update, delete)
+- Builds dependency graph
+- Orders operations correctly
+- Validates changes
+
+```dart
+class Planner {
+  Plan createPlan({
+    required State desired,
+    required State actual,
+    required DependencyGraph graph,
+  });
+}
+```
+
+### 6. Executor
+
+The executor:
+- Executes planned operations in order
+- Handles rollback on errors
+- Reports progress
+- Updates state after operations
+
+```dart
+class Executor {
+  Future<ApplyResult> execute(
+    Plan plan,
+    StateManager stateManager,
+    List<Provider> providers,
+  );
+}
+```
+
+## Data Flow
+
+### Planning Phase
+
+```
+1. Load desired state from Dart code
+   └─> Parse resources and providers
+   
+2. Load actual state from state file
+   └─> Read previous state.json
+   
+3. Build dependency graph
+   └─> Analyze resource dependencies
+   
+4. Compare states
+   └─> Identify create/update/delete operations
+   
+5. Generate plan
+   └─> Ordered list of operations
+```
+
+### Execution Phase
+
+```
+1. Validate plan
+   └─> Check for errors, conflicts
+   
+2. Execute operations in order
+   └─> For each operation:
+       ├─> Find appropriate provider
+       ├─> Execute operation
+       ├─> Update state
+       └─> Emit events
+   
+3. Save final state
+   └─> Persist to state file
+   
+4. Return result
+   └─> Summary of changes
+```
+
+## State File Format
+
+State files are JSON documents that track:
+
+```json
+{
+  "version": "1.0",
+  "stack": "my-infrastructure",
+  "resources": {
+    "vm.web-server": {
+      "id": "i-1234567890abcdef0",
+      "type": "aws.ec2.instance",
+      "properties": {
+        "name": "web-server",
+        "image": "ubuntu-22.04",
+        "size": "medium"
+      },
+      "created": "2024-01-15T10:30:00Z",
+      "updated": "2024-01-15T10:30:00Z"
+    }
+  },
+  "metadata": {
+    "lastApplied": "2024-01-15T10:30:00Z",
+    "drftVersion": "0.1.0"
+  }
+}
+```
+
+## Dependency Resolution
+
+DRFT automatically resolves dependencies:
+
+1. **Explicit Dependencies**: Resources can declare dependencies
+   ```dart
+   final db = Database(name: 'app-db')
+     ..dependsOn = [network.id];
+   ```
+
+2. **Implicit Dependencies**: DRFT detects when one resource references another
+   ```dart
+   final vm = VirtualMachine(
+     name: 'web-server',
+     networkId: network.id, // Implicit dependency
+   );
+   ```
+
+3. **Graph Building**: Creates a directed acyclic graph (DAG)
+4. **Topological Sort**: Orders operations to satisfy dependencies
+
+## Error Handling
+
+- **Validation Errors**: Caught during planning
+- **Execution Errors**: Handled with rollback capability
+- **State Corruption**: Detected and reported
+- **Provider Errors**: Wrapped and contextualized
+
+## Extensibility
+
+DRFT is designed to be extensible:
+
+- **Custom Providers**: Implement the `Provider` interface
+- **Custom Resources**: Extend base `Resource` classes
+- **Custom State Backends**: Implement `StateBackend` interface
+- **Plugins**: Hook into lifecycle events
+
