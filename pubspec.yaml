@@ -1,0 +1,11 @@
+name: drft_workspace
+description: DRFT workspace for managing multiple packages
+version: 0.1.0
+
+environment:
+  sdk: '>=3.0.0 <4.0.0'
+
+# Workspace configuration
+# Dart automatically discovers packages in subdirectories
+# Packages are located in the packages/ directory
+

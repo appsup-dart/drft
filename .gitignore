@@ -1,0 +1,28 @@
+# Dart
+.dart_tool/
+.packages
+.pub/
+pubspec.lock
+build/
+
+# IDE
+.idea/
+.vscode/
+*.iml
+*.ipr
+*.iws
+
+# DRFT
+.drft/
+*.state.json
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Internal documentation
+docs-internal/
+
