@@ -120,4 +120,4 @@ For full documentation, visit [docs.page](https://docs.page/appsup-dart/drft)
 
 ## License
 
-[To be determined]
+This project is licensed under the BSD-3-Clause License. See the [LICENSE](./LICENSE) file for details.
