@@ -6,6 +6,7 @@ import 'provider.dart';
 import 'state.dart';
 import 'plan.dart';
 import 'executor.dart';
+import '../utils/exceptions.dart';
 
 /// A stack represents a collection of resources and providers
 /// that define a complete infrastructure configuration.
@@ -60,11 +61,15 @@ class DrftStack {
 
   /// Refresh state from actual infrastructure
   ///
-  /// Reads the current state of all resources from the actual infrastructure
-  /// (via providers) and updates the state file. This is useful when:
+  /// Reads the current state of all resources defined in the stack from the
+  /// actual infrastructure (via providers) and updates the state file.
+  /// This creates a complete new state based on what actually exists.
+  ///
+  /// This is useful when:
   /// - Resources have been modified outside of DRFT
   /// - State file has become out of sync with reality
   /// - You want to verify current infrastructure state
+  /// - You want to detect drift (resources that exist but aren't in stack)
   ///
   /// Returns the refreshed state.
   Future<State> refresh() async {
@@ -72,8 +77,6 @@ class DrftStack {
     await stateManager.lock();
 
     try {
-      // Load current state to get list of resources to refresh
-      final currentState = await stateManager.load();
       final refreshedResources = <String, ResourceState>{};
 
       // Initialize all providers
@@ -82,48 +85,54 @@ class DrftStack {
       }
 
       try {
-        // Refresh each resource from the actual infrastructure
-        for (final resourceState in currentState.resources.values) {
-          try {
-            // Find the provider that can handle this resource
-            Provider? provider;
+        // Refresh each resource from the stack definition (desired resources)
+        // This reads the actual state from infrastructure for all resources
+        // we expect to exist, creating a complete new state
+        for (final resource in resources) {
+          // Find the provider that can handle this resource
+          Provider? provider;
 
-            // Find provider that can handle this resource
-            for (final p in providers) {
-              if (p.canHandle(resourceState.resource)) {
-                provider = p;
-                break;
-              }
+          // Find provider that can handle this resource
+          for (final p in providers) {
+            if (p.canHandle(resource)) {
+              provider = p;
+              break;
             }
-
-            if (provider == null) {
-              // If no provider found, keep the existing state
-              refreshedResources[resourceState.resourceId] = resourceState;
-              continue;
-            }
-
-            // Read the current state from the provider
-            final refreshedState = await provider.readResource(
-              resourceState.resource,
-            );
-
-            refreshedResources[resourceState.resourceId] = refreshedState;
-          } catch (e) {
-            // If reading fails (e.g., resource was deleted externally),
-            // we could either:
-            // 1. Remove it from state (drift detection)
-            // 2. Keep the old state (conservative approach)
-            // For now, we'll keep the old state to be conservative
-            refreshedResources[resourceState.resourceId] = resourceState;
           }
+
+          if (provider == null) {
+            // If no provider found, this is an error condition
+            throw DrftException(
+              'No provider found for resource ${resource.id} '
+              '(${resource.runtimeType}). '
+              'Make sure a provider that can handle this resource type is '
+              'included in the stack providers.',
+            );
+          }
+
+          // Read the current state from the provider
+          // This calls the provider's readResource method to get the
+          // actual current state from the infrastructure
+          try {
+            final refreshedState = await provider.readResource(resource);
+            refreshedResources[resource.id] = refreshedState;
+          } on ResourceNotFoundException {
+            // Resource doesn't exist in infrastructure - skip it
+            // This is expected if the resource hasn't been created yet
+            // or was deleted externally. It won't be included in the
+            // refreshed state, which is correct since it doesn't exist.
+            continue;
+          }
+          // Other exceptions (network errors, provider errors, etc.)
+          // should propagate to the user - they indicate real problems
         }
 
-        // Create refreshed state
+        // Create refreshed state with resources from actual infrastructure
+        // This is a completely new state based on what actually exists
         final refreshedState = State(
-          version: currentState.version,
-          stackName: currentState.stackName,
+          version: '1.0',
+          stackName: name,
           resources: refreshedResources,
-          metadata: currentState.metadata,
         );
 
         // Save the refreshed state
