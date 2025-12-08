@@ -1,6 +1,6 @@
 # DRFT Examples
 
-This document contains practical examples of using DRFT to define infrastructure.
+This document contains practical examples of using DRFT to manage various types of resources, from cloud infrastructure to project configuration and application setup.
 
 ## Basic Example: Single VM
 
@@ -548,6 +548,112 @@ void main() async {
   
   final plan = await networkStack.plan();
   await networkStack.apply(plan);
+}
+```
+
+## Application Configuration Example
+
+DRFT isn't limited to cloud infrastructure. Here's an example managing application configuration resources:
+
+```dart
+import 'package:drft/drft.dart';
+import 'package:drft_firebase/drft_firebase.dart';
+
+void main() async {
+  final stack = DrftStack(
+    name: 'app-configuration',
+    providers: [
+      FirebaseProvider(),
+      AppStoreProvider(),
+    ],
+    resources: [
+      // Firebase Project (data source - must exist externally)
+      FirebaseProject(
+        id: 'project',
+        projectId: 'my-firebase-project',
+        displayName: 'My Firebase Project',
+      ),
+      
+      // Firebase Apps
+      FirebaseApp(
+        id: 'ios-app',
+        projectId: 'my-firebase-project',
+        platform: FirebaseAppPlatform.ios,
+        displayName: 'My iOS App',
+        bundleId: 'com.example.app',
+      ),
+      
+      FirebaseApp(
+        id: 'android-app',
+        projectId: 'my-firebase-project',
+        platform: FirebaseAppPlatform.android,
+        displayName: 'My Android App',
+        packageName: 'com.example.app',
+      ),
+      
+      // App Store Connect App
+      AppStoreApp(
+        id: 'app-store-app',
+        name: 'My App',
+        bundleId: 'com.example.app',
+        primaryLocale: 'en-US',
+        sku: 'APP-SKU-001',
+      ),
+    ],
+  );
+  
+  final plan = await stack.plan();
+  await stack.apply(plan);
+}
+```
+
+## Project Setup Example
+
+You can also use DRFT to manage project setup and development environment configuration:
+
+```dart
+import 'package:drft/drft.dart';
+
+void main() async {
+  final stack = DrftStack(
+    name: 'dev-environment',
+    providers: [
+      LocalFileProvider(), // Hypothetical provider for local file management
+      DockerProvider(),    // Hypothetical provider for Docker containers
+    ],
+    resources: [
+      // Development configuration files
+      ConfigFile(
+        path: '.env.example',
+        content: '''
+          DATABASE_URL=postgresql://localhost:5432/dev
+          API_KEY=your-api-key-here
+          DEBUG=true
+        ''',
+      ),
+      
+      // Docker development environment
+      DockerContainer(
+        name: 'postgres-dev',
+        image: 'postgres:14',
+        ports: {'5432': '5432'},
+        environment: {
+          'POSTGRES_DB': 'dev',
+          'POSTGRES_USER': 'dev',
+          'POSTGRES_PASSWORD': 'dev',
+        },
+      ),
+      
+      DockerContainer(
+        name: 'redis-dev',
+        image: 'redis:7',
+        ports: {'6379': '6379'},
+      ),
+    ],
+  );
+  
+  final plan = await stack.plan();
+  await stack.apply(plan);
 }
 ```
 

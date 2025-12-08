@@ -5,7 +5,7 @@ description: Get up and running with DRFT in minutes
 
 # Getting Started
 
-This guide will help you get started with DRFT and create your first infrastructure stack.
+This guide will help you get started with DRFT and create your first resource stack.
 
 ## Installation
 
@@ -92,7 +92,7 @@ print(result.summary);
 
 DRFT follows a simple workflow:
 
-1. **Define** your desired infrastructure in code
+1. **Define** your desired resources in code
 2. **Plan** to see what changes will be made
 3. **Apply** to execute the changes
 4. **State** is automatically tracked
@@ -114,7 +114,7 @@ print('Current resources: ${state.resources.length}');
 
 ### Refresh State
 
-Refresh state from actual infrastructure:
+Refresh state from the actual system:
 
 ```dart
 final state = await stack.refresh();
@@ -142,7 +142,7 @@ Ensure you've added the correct provider to your stack and that it's properly co
 
 ### Resources Not Updating
 
-Check that your resource definitions match the actual infrastructure. Use `refresh()` to sync state.
+Check that your resource definitions match the actual state. Use `refresh()` to sync state.
 
 ## Getting Help
 

@@ -5,11 +5,11 @@ description: Understanding the fundamental concepts of DRFT
 
 # Core Concepts
 
-DRFT is built around a few key concepts that work together to manage your infrastructure.
+DRFT is built around a few key concepts that work together to manage your resources.
 
 ## Resources
 
-**Resources** are the building blocks of your infrastructure. They represent the things you want to manage - servers, databases, networks, etc.
+**Resources** are the building blocks of your stack. They represent the things you want to manage - whether that's cloud infrastructure (servers, databases, networks), project configuration, application settings, or any other declarative resource.
 
 ```dart
 final resource = VirtualMachine(
@@ -28,7 +28,7 @@ Learn more: [Resources Guide](/resources)
 
 ## Providers
 
-**Providers** are the bridge between DRFT and the actual infrastructure platforms (AWS, Firebase, etc.). They handle the creation, reading, updating, and deletion of resources.
+**Providers** are the bridge between DRFT and the actual platforms or systems (AWS, Firebase, App Store Connect, etc.). They handle the creation, reading, updating, and deletion of resources.
 
 ```dart
 final provider = AwsProvider(
@@ -47,13 +47,13 @@ Learn more: [Providers Guide](/providers)
 
 ## State
 
-**State** represents the current state of your infrastructure. DRFT tracks:
+**State** represents the current state of your resources. DRFT tracks:
 - What resources exist
 - Their current properties
 - Their relationships
 
 State is stored locally (or remotely with a state backend) and is used to:
-- Compare desired vs actual infrastructure
+- Compare desired vs actual resources
 - Plan changes
 - Track what's been created
 
@@ -61,7 +61,7 @@ Learn more: [State Management](/resource-state-provider-relationship)
 
 ## Stacks
 
-A **Stack** is a collection of resources and providers that define a complete infrastructure configuration.
+A **Stack** is a collection of resources and providers that define a complete resource configuration.
 
 ```dart
 final stack = DrftStack(
@@ -82,7 +82,7 @@ Stacks provide:
 
 ## Planning
 
-**Planning** is the process of comparing desired infrastructure (your code) with actual infrastructure (what exists) to determine what changes need to be made.
+**Planning** is the process of comparing desired resources (your code) with actual resources (what exists) to determine what changes need to be made.
 
 ```dart
 final plan = await stack.plan();
@@ -97,7 +97,7 @@ A plan shows you:
 
 ## Execution
 
-**Execution** is applying the plan to actually make changes to your infrastructure.
+**Execution** is applying the plan to actually make changes to your resources.
 
 ```dart
 final result = await stack.apply(plan);
@@ -163,5 +163,5 @@ Learn more: [Resources Guide](/resources#data-sources-read-only-external-resourc
 4. **DRFT executes** the changes
 5. **State is updated** automatically
 
-This cycle repeats as your infrastructure evolves.
+This cycle repeats as your resources evolve.
 

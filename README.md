@@ -1,15 +1,20 @@
 # DRFT - Dart Resource Framework Toolkit
 
-**DRFT** (pronounced "drift") is an infrastructure-as-code toolkit written in Dart. It allows you to describe your infrastructure declaratively using Dart code, leveraging Dart's expressive syntax and type system.
+**DRFT** (pronounced "drift") stands for **Dart Resource Framework Toolkit**. The name "drift" refers to the concept of *infrastructure drift* - when your actual resources diverge from their desired state. DRFT helps you detect and correct this drift by comparing desired resources (defined in code) with actual resources (what exists in the system).
+
+DRFT is a resource management framework written in Dart. It allows you to describe and manage resources declaratively using Dart code, leveraging Dart's expressive syntax and type system.
 
 ## Overview
 
-DRFT enables you to:
-- **Declare infrastructure** using clean, type-safe Dart code
-- **Compare states** between desired and actual infrastructure
+DRFT is a framework for managing resources of any kind - from cloud infrastructure to project configuration, application setup, and more. It enables you to:
+
+- **Declare resources** using clean, type-safe Dart code
+- **Compare states** between desired and actual resources
 - **Plan changes** before applying them
-- **Execute changes** to bring infrastructure to the desired state
-- **Manage state** to track infrastructure resources
+- **Execute changes** to bring resources to the desired state
+- **Manage state** to track your resources
+
+While DRFT excels at infrastructure-as-code (IaC) scenarios, it's designed to be a general-purpose resource management framework applicable to many different use cases.
 
 ## Project Structure
 
@@ -91,7 +96,7 @@ dart pub get
 
 ## Features
 
-- **Type Safety**: Leverage Dart's strong typing for infrastructure definitions
+- **Type Safety**: Leverage Dart's strong typing for resource definitions
 - **Immutable Resources**: Flutter-style immutable resources with final properties
 - **Clean Syntax**: Familiar Dart constructor syntax, just like Flutter widgets
 - **State Management**: Automatic state tracking and comparison
@@ -99,6 +104,15 @@ dart pub get
 - **Plan Before Apply**: Always see what will change before making changes
 - **Extensible**: Easy to add new providers and resources
 - **Idempotent**: Running the same configuration multiple times is safe
+
+## Use Cases
+
+DRFT can be used to manage various types of resources:
+
+- **Infrastructure as Code (IaC)**: Cloud infrastructure, servers, databases, networks
+- **Project Setup**: Development environments, tooling configuration, CI/CD pipelines
+- **Application Configuration**: App store listings, Firebase projects, API configurations
+- **Any Declarative Resource**: Anything that can be described, planned, and managed declaratively
 
 ## Project Status
 

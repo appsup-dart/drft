@@ -52,7 +52,7 @@ class DrftStack {
 
 ### 2. Resources
 
-Resources are immutable Dart classes that represent the *desired* state of infrastructure components. Each resource:
+Resources are immutable Dart classes that represent the *desired* state of resources. Each resource:
 - Has a unique identifier
 - Has final properties that define its desired state
 - Can depend on other resources (as Resource references)
@@ -76,7 +76,7 @@ abstract class Resource<StateType extends ResourceState> {
 
 Providers are responsible for:
 - Translating Resource definitions to API calls
-- Managing the actual infrastructure
+- Managing resources in the actual system
 - Creating ResourceState instances after operations
 - Reporting current state
 - Handling provider-specific logic
@@ -103,7 +103,7 @@ abstract class Provider {
 ### 4. State Manager
 
 The state manager:
-- Persists infrastructure state to disk
+- Persists resource state to disk
 - Loads previous state
 - Compares desired vs actual state
 - Tracks resource metadata

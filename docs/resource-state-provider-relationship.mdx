@@ -4,15 +4,15 @@ This document explains the relationship between the three core concepts in DRFT:
 
 ## Overview
 
-These three concepts work together to manage infrastructure:
+These three concepts work together to manage resources:
 
-- **Resource**: Represents the *desired* state of infrastructure (what you want)
-- **ResourceState**: Represents the *actual* state of infrastructure (what exists)
-- **Provider**: The bridge that translates between Resources and actual infrastructure
+- **Resource**: Represents the *desired* state of a resource (what you want)
+- **ResourceState**: Represents the *actual* state of a resource (what exists)
+- **Provider**: The bridge that translates between Resources and the actual managed systems
 
 ```
 ┌─────────────┐         ┌──────────────┐         ┌─────────────┐
-│  Resource   │─────────▶│   Provider   │─────────▶│ Infrastructure│
+│  Resource   │─────────▶│   Provider   │─────────▶│   System    │
 │ (Desired)   │         │  (Translator) │         │  (Actual)   │
 └─────────────┘         └──────────────┘         └─────────────┘
       │                         │                        │
@@ -28,7 +28,7 @@ These three concepts work together to manage infrastructure:
 
 ## Resource
 
-A **Resource** is an immutable Dart class that represents the *desired* state of a piece of infrastructure. It defines:
+A **Resource** is an immutable Dart class that represents the *desired* state of a resource. It defines:
 
 - **What** you want to create
 - **Properties** that describe the desired configuration
@@ -72,7 +72,7 @@ final database = Database(
 
 ## ResourceState
 
-A **ResourceState** represents the *actual* state of infrastructure after it has been created or read from the provider. It contains:
+A **ResourceState** represents the *actual* state of a resource after it has been created or read from the provider. It contains:
 
 - **Read-only properties**: Values assigned by the provider (e.g., IDs, URLs)
 - **Current configuration**: The actual properties of the resource
@@ -176,18 +176,18 @@ Resource (Desired)  →  Compare  →  ResourceState (Actual)
 ### 2. Execution Phase
 
 ```
-Resource → Provider → Infrastructure → ResourceState
-   │         │             │                │
-   │         │             │                │
-   └─────────┴─────────────┴────────────────┘
+Resource → Provider → System → ResourceState
+   │         │          │            │
+   │         │          │            │
+   └─────────┴──────────┴────────────┘
                     │
                     ▼
             Saved to State File
 ```
 
 1. **Resource** is passed to **Provider**
-2. **Provider** calls actual infrastructure API
-3. Infrastructure is created/updated/deleted
+2. **Provider** calls the actual system API
+3. The resource is created/updated/deleted in the system
 4. **Provider** creates **ResourceState** with actual values
 5. **ResourceState** is saved to state file
 
@@ -213,7 +213,7 @@ final resource = Database(
   engine: 'postgresql',
 );
 
-// Provider creates infrastructure and returns ResourceState
+// Provider creates the resource in the system and returns ResourceState
 final state = await provider.createResource(resource);
 
 // Output: ResourceState (what exists)
@@ -285,7 +285,7 @@ final stack = DrftStack(
 final plan = await stack.plan();
 // If database doesn't exist: Plan shows CREATE operation
 
-// 4. Apply: Provider creates infrastructure
+// 4. Apply: Provider creates the resource
 final result = await stack.apply(plan);
 // Provider.createResource(database) is called
 // → API call creates database
@@ -322,19 +322,19 @@ final connectionString = state.connectionString; // Type-safe!
 |---------|-----------|-----------|----------|
 | **Resource** | Desired state | Developer (Dart code) | Configuration properties |
 | **ResourceState** | Actual state | Provider (after API call) | Configuration + read-only properties |
-| **Provider** | Translation layer | Provider developer | Logic to manage infrastructure |
+| **Provider** | Translation layer | Provider developer | Logic to manage resources |
 
 **The Flow:**
 1. Developer defines **Resource** (desired state)
 2. Planner compares **Resource** with **ResourceState** (actual state)
 3. Executor passes **Resource** to **Provider**
-4. **Provider** creates/updates infrastructure
+4. **Provider** creates/updates resources in the system
 5. **Provider** returns **ResourceState** (with actual values)
 6. **ResourceState** is saved to state file
 
 This separation allows DRFT to:
 - **Plan** changes before applying them
-- **Track** actual infrastructure state
+- **Track** actual resource state
 - **Compare** desired vs actual
 - **Support** multiple providers for different platforms
 
